@@ -1,9 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
 import 'package:barber_shop_owner/features/floor_plan/domain/station.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/floor_plan_providers.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/floor_modals.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/room_shell_painter.dart';
+import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/salon_sign.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/station_widget.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/waiting_couch_widget.dart';
 import 'package:barber_shop_owner/features/queue/presentation/queue_providers.dart';
@@ -90,11 +93,11 @@ class FloorPlanScreen extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: _ceilingHeight),
                       SizedBox(
-                        height: _hudHeight,
-                        child: _RoomHud(
+                        height: _ceilingHeight + _hudHeight,
+                        child: _RoomHeader(
                           shopName: shop.name,
+                          established: shop.createdAt.year,
                           active: activeCount,
                           total: totalChairs,
                           waiting: queueItems.length,
@@ -154,7 +157,7 @@ class FloorPlanScreen extends ConsumerWidget {
 
   static const double _ceilingHeight = 64;
   static const double _wallWidth = 18;
-  static const double _hudHeight = 36;
+  static const double _hudHeight = 50;
   static const double _couchAreaHeight = 196;
   static const double _minRowHeight = 112;
   static const double _maxRowHeight = 150;
@@ -333,17 +336,19 @@ class _QueueListSheet extends ConsumerWidget {
   }
 }
 
-/// Live shop status printed along the back wall, like the technical
-/// annotations of a blueprint.
-class _RoomHud extends StatelessWidget {
-  const _RoomHud({
+/// Top of the room: the salon's marquee sign hanging from the ceiling, with
+/// live status printed on the back wall to either side of it.
+class _RoomHeader extends StatelessWidget {
+  const _RoomHeader({
     required this.shopName,
+    required this.established,
     required this.active,
     required this.total,
     required this.waiting,
   });
 
   final String shopName;
+  final int established;
   final int active;
   final int total;
   final int waiting;
@@ -352,31 +357,54 @@ class _RoomHud extends StatelessWidget {
   Widget build(BuildContext context) {
     const style = TextStyle(
       fontSize: 9,
+      height: 1.3,
       fontWeight: FontWeight.w700,
-      letterSpacing: 0.8,
+      letterSpacing: 0.6,
       color: Color(0xFF6B7280),
     );
     final occupancy = total > 0 ? (active / total * 100).round() : 0;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(34, 12, 34, 0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '${shopName.toUpperCase()}\n'
-              '${DateFormat('EEE d MMM').format(DateTime.now()).toUpperCase()}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: style,
+    final today = DateFormat('EEE d MMM').format(DateTime.now()).toUpperCase();
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final signWidth = math.min(
+          constraints.maxWidth * 0.62,
+          (constraints.maxHeight - 4) * SalonSign.aspectRatio,
+        );
+        final sideWidth = (constraints.maxWidth - signWidth) / 2 - 26;
+
+        Widget side(String text, TextAlign align) => SizedBox(
+          width: math.max(0, sideWidth),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: align == TextAlign.left
+                ? Alignment.bottomLeft
+                : Alignment.bottomRight,
+            child: Text(text, textAlign: align, style: style),
+          ),
+        );
+
+        return Stack(
+          children: [
+            Align(
+              alignment: const Alignment(0, -0.2),
+              child: SizedBox(
+                width: signWidth,
+                child: SalonSign(name: shopName, established: established),
+              ),
             ),
-          ),
-          Text(
-            '$active/$total ACTIVE · $occupancy%\n$waiting WAITING',
-            textAlign: TextAlign.right,
-            style: style,
-          ),
-        ],
-      ),
+            Positioned(left: 26, bottom: 4, child: side(today, TextAlign.left)),
+            Positioned(
+              right: 26,
+              bottom: 4,
+              child: side(
+                '$active/$total ACTIVE\n$occupancy% · $waiting WAITING',
+                TextAlign.right,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

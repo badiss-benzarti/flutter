@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'room_art.dart';
 
-/// Paints the room around the stations: perspective ceiling with a light
-/// panel, back wall line and the two side walls.
+/// Paints the room around the stations: perspective ceiling, back wall line and the two side walls.
 class RoomShellPainter extends CustomPainter {
   const RoomShellPainter({
     required this.ceilingHeight,
@@ -44,7 +43,7 @@ class RoomShellPainter extends CustomPainter {
       Paint()..color = RoomInk.wall,
     );
 
-    // Ceiling and its light panel.
+    // Ceiling (the salon sign hangs from its center).
     RoomInk.shape(
       canvas,
       RoomInk.poly([
@@ -54,15 +53,6 @@ class RoomShellPainter extends CustomPainter {
         Offset(wall, ceil),
       ]),
       Paint()..color = RoomInk.wall,
-    );
-    RoomInk.shape(
-      canvas,
-      RoomInk.poly([
-        Offset(w * 0.17, ceil * 0.14),
-        Offset(w * 0.83, ceil * 0.14),
-        Offset(w * 0.79, ceil * 0.8),
-        Offset(w * 0.21, ceil * 0.8),
-      ]),
     );
 
     // Technical detailing along the back wall, as in a floor blueprint.
