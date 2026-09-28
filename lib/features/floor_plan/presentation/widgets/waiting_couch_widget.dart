@@ -1,5 +1,8 @@
+import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/room_art.dart';
 import 'package:flutter/material.dart';
 
+/// The waiting-area card at the front of the room: a couch with one little
+/// character per waiting client, and the "reserve a spot" action.
 class WaitingCouchWidget extends StatelessWidget {
   const WaitingCouchWidget({
     super.key,
@@ -12,100 +15,83 @@ class WaitingCouchWidget extends StatelessWidget {
   final VoidCallback onReserveTap;
   final VoidCallback onQueueViewTap;
 
+  static const _radius = Radius.circular(22);
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: const BoxConstraints(minWidth: 260, maxWidth: 290),
+      width: 200,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.black, width: 1.5),
-        boxShadow: [
+        borderRadius: const BorderRadius.all(_radius),
+        border: Border.all(color: RoomInk.ink, width: 2),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Color(0x33000000),
+            blurRadius: 18,
+            offset: Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Couch visual area
           InkWell(
             onTap: onQueueViewTap,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(19)),
+            borderRadius: const BorderRadius.vertical(top: _radius),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 8),
               child: Column(
                 children: [
                   CustomPaint(
-                    size: const Size(120, 46),
-                    painter: _SofaPainter(),
+                    size: const Size(140, 62),
+                    painter: _CouchPainter(waiting: waitingCount),
                   ),
                   const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: waitingCount > 0
-                              ? const Color(0xFFF59E0B)
-                              : const Color(0xFF10B981),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        waitingCount == 1
-                            ? '1 client waiting'
-                            : '$waitingCount clients waiting',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF4B5563),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    waitingCount == 1
+                        ? '1 client waiting'
+                        : '$waitingCount clients waiting',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF4B5563),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-
-          // Bottom Reserve Waiting Spot button capsule
-          InkWell(
-            onTap: onReserveTap,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(18),
-            ),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-              decoration: const BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.vertical(
-                  bottom: Radius.circular(18),
-                ),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'RESERVE WAITING SPOT',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+          Material(
+            color: RoomInk.ink,
+            borderRadius: const BorderRadius.vertical(bottom: _radius),
+            child: InkWell(
+              onTap: onReserveTap,
+              borderRadius: const BorderRadius.vertical(bottom: _radius),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(16, 10, 12, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'RESERVE WAITING SPOT',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          height: 1.15,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 6),
-                  Icon(Icons.add_circle_outline, color: Colors.white, size: 15),
-                ],
+                    SizedBox(width: 8),
+                    Icon(
+                      Icons.add_circle_outline,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -115,58 +101,99 @@ class WaitingCouchWidget extends StatelessWidget {
   }
 }
 
-class _SofaPainter extends CustomPainter {
+class _CouchPainter extends CustomPainter {
+  const _CouchPainter({required this.waiting});
+
+  final int waiting;
+
+  static const _maxSeated = 3;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final fillPaint = Paint()
-      ..color = const Color(0xFFF3F4F6)
-      ..style = PaintingStyle.fill;
+    final c = canvas;
+    final seatWidth = (size.width - 28) / 3;
 
-    final strokePaint = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    // Sofa outer outline
-    final outerRRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(size.width / 2, size.height / 2),
-        width: 110,
-        height: 40,
-      ),
-      const Radius.circular(8),
+    c.drawOval(
+      Rect.fromLTWH(6, size.height - 8, size.width - 12, 8),
+      RoomInk.shadow,
     );
-    canvas.drawRRect(outerRRect, fillPaint);
-    canvas.drawRRect(outerRRect, strokePaint);
 
-    // Left armrest
-    final leftArm = RRect.fromRectAndRadius(
-      Rect.fromLTWH(size.width / 2 - 55, size.height / 2 - 20, 14, 40),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(leftArm, fillPaint);
-    canvas.drawRRect(leftArm, strokePaint);
-
-    // Right armrest
-    final rightArm = RRect.fromRectAndRadius(
-      Rect.fromLTWH(size.width / 2 + 41, size.height / 2 - 20, 14, 40),
-      const Radius.circular(4),
-    );
-    canvas.drawRRect(rightArm, fillPaint);
-    canvas.drawRRect(rightArm, strokePaint);
-
-    // 3 cushions
-    const cushionWidth = 27.0;
-    for (int i = 0; i < 3; i++) {
-      final left = size.width / 2 - 40.5 + (i * cushionWidth);
-      final cushionRect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(left, size.height / 2 - 16, cushionWidth, 32),
-        const Radius.circular(4),
+    // Backrest cushions.
+    for (var i = 0; i < 3; i++) {
+      final left = 14 + i * seatWidth;
+      RoomInk.rrect(
+        c,
+        RRect.fromLTRBR(
+          left,
+          18,
+          left + seatWidth,
+          40,
+          const Radius.circular(5),
+        ),
       );
-      canvas.drawRRect(cushionRect, strokePaint);
+    }
+
+    // Waiting clients, one per seat.
+    final seated = waiting.clamp(0, _maxSeated);
+    for (var i = 0; i < seated; i++) {
+      final cx = 14 + seatWidth * (i + 0.5);
+      RoomInk.shape(
+        c,
+        Path()
+          ..moveTo(cx - 10, 44)
+          ..quadraticBezierTo(cx - 10, 26, cx, 26)
+          ..quadraticBezierTo(cx + 10, 26, cx + 10, 44)
+          ..close(),
+      );
+      RoomInk.circle(c, Offset(cx, 17), 8.5);
+      c
+        ..drawCircle(Offset(cx - 3, 16), 1, RoomInk.black)
+        ..drawCircle(Offset(cx + 3, 16), 1, RoomInk.black);
+    }
+
+    // Seat cushions, arms and legs.
+    for (var i = 0; i < 3; i++) {
+      final left = 14 + i * seatWidth;
+      RoomInk.rrect(
+        c,
+        RRect.fromLTRBR(
+          left,
+          40,
+          left + seatWidth,
+          52,
+          const Radius.circular(4),
+        ),
+      );
+    }
+    for (final left in [2.0, size.width - 14]) {
+      RoomInk.rrect(
+        c,
+        RRect.fromLTRBR(left, 26, left + 12, 54, const Radius.circular(5)),
+      );
+    }
+    for (final x in [10.0, size.width - 10]) {
+      c.drawLine(Offset(x, 54), Offset(x, 58), RoomInk.line);
+    }
+
+    if (waiting > _maxSeated) {
+      final label = TextPainter(
+        text: TextSpan(
+          text: '+${waiting - _maxSeated}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final badge = Offset(size.width - 12, 8);
+      c.drawCircle(badge, 11, RoomInk.black);
+      label.paint(c, badge - Offset(label.width / 2, label.height / 2));
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(_CouchPainter oldDelegate) =>
+      oldDelegate.waiting != waiting;
 }

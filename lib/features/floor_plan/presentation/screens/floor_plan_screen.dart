@@ -3,6 +3,7 @@ import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_pro
 import 'package:barber_shop_owner/features/floor_plan/domain/station.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/floor_plan_providers.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/floor_modals.dart';
+import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/room_shell_painter.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/station_widget.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/waiting_couch_widget.dart';
 import 'package:barber_shop_owner/features/queue/presentation/queue_providers.dart';
@@ -53,160 +54,110 @@ class FloorPlanScreen extends ConsumerWidget {
         onRetry: () => ref.read(floorPlanProvider.notifier).loadStations(),
       );
     } else {
-      body = Stack(
-        children: [
-          Positioned.fill(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(queueProvider);
-                await ref.read(floorPlanProvider.notifier).loadStations();
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.only(
-                  top: 12,
-                  bottom: 150, // Room for the floating waiting couch
-                  left: 8,
-                  right: 8,
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: leftStations.map((s) {
-                          return StationWidget(
-                            station: s,
-                            isLeftWall: true,
-                            onTap: () => _handleStationTap(context, ref, s),
-                          );
-                        }).toList(),
+      final rows = leftStations.length;
+      final couch = WaitingCouchWidget(
+        waitingCount: queueItems.length,
+        onReserveTap: () =>
+            showAppSheet<void>(context, (_) => const _AddWaitingSheet()),
+        onQueueViewTap: () =>
+            showAppSheet<void>(context, (_) => const _QueueListSheet()),
+      );
+      body = LayoutBuilder(
+        builder: (context, constraints) {
+          // Size the rows so the whole room, couch included, fits on one
+          // screen when possible; larger shops scroll.
+          const fixed = _ceilingHeight + _hudHeight + _couchAreaHeight;
+          final rowHeight = rows == 0
+              ? _maxRowHeight
+              : ((constraints.maxHeight - fixed) / rows).clamp(
+                  _minRowHeight,
+                  _maxRowHeight,
+                );
+
+          return RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(queueProvider);
+              await ref.read(floorPlanProvider.notifier).loadStations();
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: CustomPaint(
+                  painter: const RoomShellPainter(
+                    ceilingHeight: _ceilingHeight,
+                    wallWidth: _wallWidth,
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: _ceilingHeight),
+                      SizedBox(
+                        height: _hudHeight,
+                        child: _RoomHud(
+                          shopName: shop.name,
+                          active: activeCount,
+                          total: totalChairs,
+                          waiting: queueItems.length,
+                        ),
                       ),
-                    ),
-                    // Central corridor walkway line
-                    Container(
-                      width: 1.5,
-                      height: leftStations.length * 96.0,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      color: const Color(0xFFE5E7EB),
-                    ),
-                    Expanded(
-                      child: Column(
-                        children: rightStations.map((s) {
-                          return StationWidget(
-                            station: s,
-                            isLeftWall: false,
-                            onTap: () => _handleStationTap(context, ref, s),
-                          );
-                        }).toList(),
+                      for (var i = 0; i < rows; i++)
+                        SizedBox(
+                          height: rowHeight,
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: StationWidget(
+                                  station: leftStations[i],
+                                  isLeftWall: true,
+                                  onTap: () => _handleStationTap(
+                                    context,
+                                    ref,
+                                    leftStations[i],
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: i < rightStations.length
+                                    ? StationWidget(
+                                        station: rightStations[i],
+                                        isLeftWall: false,
+                                        onTap: () => _handleStationTap(
+                                          context,
+                                          ref,
+                                          rightStations[i],
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
+                              ),
+                            ],
+                          ),
+                        ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10, bottom: 14),
+                        child: couch,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 12,
-            child: Center(
-              child: WaitingCouchWidget(
-                waitingCount: queueItems.length,
-                onReserveTap: () => showAppSheet<void>(
-                  context,
-                  (_) => const _AddWaitingSheet(),
-                ),
-                onQueueViewTap: () =>
-                    showAppSheet<void>(context, (_) => const _QueueListSheet()),
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(
-              shop.name,
-              activeCount,
-              totalChairs,
-              queueItems.length,
-            ),
-            Expanded(child: body),
-          ],
-        ),
-      ),
+      backgroundColor: Colors.white,
+      body: SafeArea(bottom: false, child: body),
     );
   }
 
-  Widget _buildHeader(String shopName, int active, int total, int waiting) {
-    final today = DateFormat('EEE d MMM').format(DateTime.now());
-    final occupancyRate = total > 0 ? ((active / total) * 100).round() : 0;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              today,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-          ),
-          Column(
-            children: [
-              Text(
-                shopName.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 12,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                '$active/$total Chairs Active ($occupancyRate%)',
-                style: const TextStyle(
-                  color: Color(0xFF6B7280),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const Icon(Icons.event_seat_outlined, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '$waiting waiting',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  static const double _ceilingHeight = 64;
+  static const double _wallWidth = 18;
+  static const double _hudHeight = 36;
+  static const double _couchAreaHeight = 196;
+  static const double _minRowHeight = 112;
+  static const double _maxRowHeight = 150;
 
   void _handleStationTap(BuildContext context, WidgetRef ref, Station station) {
     switch (station.status) {
@@ -378,6 +329,54 @@ class _QueueListSheet extends ConsumerWidget {
             );
           }),
       ],
+    );
+  }
+}
+
+/// Live shop status printed along the back wall, like the technical
+/// annotations of a blueprint.
+class _RoomHud extends StatelessWidget {
+  const _RoomHud({
+    required this.shopName,
+    required this.active,
+    required this.total,
+    required this.waiting,
+  });
+
+  final String shopName;
+  final int active;
+  final int total;
+  final int waiting;
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 9,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 0.8,
+      color: Color(0xFF6B7280),
+    );
+    final occupancy = total > 0 ? (active / total * 100).round() : 0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(34, 12, 34, 0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '${shopName.toUpperCase()}\n'
+              '${DateFormat('EEE d MMM').format(DateTime.now()).toUpperCase()}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: style,
+            ),
+          ),
+          Text(
+            '$active/$total ACTIVE · $occupancy%\n$waiting WAITING',
+            textAlign: TextAlign.right,
+            style: style,
+          ),
+        ],
+      ),
     );
   }
 }

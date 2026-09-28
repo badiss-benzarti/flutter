@@ -13,66 +13,145 @@ class MainNavigationScreen extends StatefulWidget {
 }
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
-  int _currentIndex = 0;
+  static const _floorIndex = 2;
 
-  final List<Widget> _screens = const [
-    FloorPlanScreen(),
+  int _currentIndex = _floorIndex;
+
+  static const List<Widget> _screens = [
+    SettingsScreen(),
     FinanceScreen(),
+    FloorPlanScreen(),
     BarbersScreen(),
     ClientsScreen(),
-    SettingsScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: Color(0xFFE5E7EB), width: 1.2)),
+      bottomNavigationBar: _RoomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+      ),
+    );
+  }
+}
+
+/// Rounded, outlined tab bar with the room (floor plan) as the center
+/// home button.
+class _RoomNavigationBar extends StatelessWidget {
+  const _RoomNavigationBar({required this.currentIndex, required this.onTap});
+
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  static const _ink = Color(0xFF111111);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(
+          top: BorderSide(color: _ink, width: 2),
+          left: BorderSide(color: _ink, width: 2),
+          right: BorderSide(color: _ink, width: 2),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _currentIndex,
-          onTap: (idx) => setState(() => _currentIndex = idx),
-          type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.black,
-          unselectedItemColor: const Color(0xFF9CA3AF),
-          selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 8, 6, 6),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _item(0, Icons.settings_outlined, Icons.settings, 'Settings'),
+              _item(
+                1,
+                Icons.monetization_on_outlined,
+                Icons.monetization_on,
+                'Finance',
+              ),
+              Expanded(child: _homeButton()),
+              _item(3, Icons.groups_outlined, Icons.groups, 'Team'),
+              _item(4, Icons.badge_outlined, Icons.badge, 'Clients'),
+            ],
           ),
-          unselectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w500,
-            fontSize: 11,
+        ),
+      ),
+    );
+  }
+
+  Widget _item(int index, IconData icon, IconData activeIcon, String label) {
+    final selected = currentIndex == index;
+    return Expanded(
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: InkResponse(
+          onTap: () => onTap(index),
+          radius: 36,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  selected ? activeIcon : icon,
+                  size: 28,
+                  color: selected ? _ink : const Color(0xFF6B7280),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                    color: selected ? _ink : const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
           ),
-          elevation: 0,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined),
-              activeIcon: Icon(Icons.dashboard),
-              label: 'Floor Plan',
+        ),
+      ),
+    );
+  }
+
+  Widget _homeButton() {
+    final selected = currentIndex == _MainNavigationScreenState._floorIndex;
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: 'Shop floor',
+      child: GestureDetector(
+        onTap: () => onTap(_MainNavigationScreenState._floorIndex),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: selected ? _ink : Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: _ink, width: 2),
+              ),
+              child: Icon(
+                Icons.chair_outlined,
+                color: selected ? Colors.white : _ink,
+                size: 26,
+              ),
             ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.monetization_on_outlined),
-              activeIcon: Icon(Icons.monetization_on),
-              label: 'Finance',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.groups_outlined),
-              activeIcon: Icon(Icons.groups),
-              label: 'Barbers',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.badge_outlined),
-              activeIcon: Icon(Icons.badge),
-              label: 'Clients',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.settings_outlined),
-              activeIcon: Icon(Icons.settings),
-              label: 'Settings',
+            const SizedBox(height: 2),
+            Text(
+              'Floor',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                color: _ink,
+              ),
             ),
           ],
         ),

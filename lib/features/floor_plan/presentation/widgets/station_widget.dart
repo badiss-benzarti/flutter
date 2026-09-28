@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:barber_shop_owner/features/floor_plan/domain/station.dart';
+import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/station_painter.dart';
 import 'package:flutter/material.dart';
 
-class StationWidget extends StatelessWidget {
+/// One illustrated station in the room, with a name tag underneath.
+class StationWidget extends StatefulWidget {
   const StationWidget({
     super.key,
     required this.station,
@@ -14,284 +18,173 @@ class StationWidget extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _getBorderColor(),
-            width: station.status == ChairStatus.occupied ? 2 : 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: isLeftWall
-              ? [
-                  _buildMirrorAndClippers(),
-                  const SizedBox(width: 8),
-                  _buildChairArea(),
-                ]
-              : [
-                  _buildChairArea(),
-                  const SizedBox(width: 8),
-                  _buildMirrorAndClippers(),
-                ],
-        ),
-      ),
-    );
+  State<StationWidget> createState() => _StationWidgetState();
+}
+
+class _StationWidgetState extends State<StationWidget>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _snip = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+  Timer? _clock;
+
+  bool get _isServing => widget.station.status == ChairStatus.occupied;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncActivity();
   }
 
-  Color _getBorderColor() {
-    switch (station.status) {
-      case ChairStatus.occupied:
-        return Colors.black;
-      case ChairStatus.available:
-        return const Color(0xFF10B981);
-      case ChairStatus.cleaning:
-        return const Color(0xFFF59E0B);
-      case ChairStatus.empty:
-        return const Color(0xFFD1D5DB);
+  @override
+  void didUpdateWidget(StationWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.station.status != widget.station.status) _syncActivity();
+  }
+
+  /// Animates scissors and refreshes the elapsed time only while serving.
+  void _syncActivity() {
+    if (_isServing) {
+      if (!_snip.isAnimating) _snip.repeat();
+      _clock ??= Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => setState(() {}),
+      );
+    } else {
+      _snip.stop();
+      _clock?.cancel();
+      _clock = null;
     }
   }
 
-  Widget _buildMirrorAndClippers() {
-    return Container(
-      width: 44,
-      height: 72,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF9CA3AF), width: 1.2),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          // Mirror header
-          Container(
-            width: 28,
-            height: 4,
-            decoration: BoxDecoration(
-              color: const Color(0xFF6B7280),
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Clipper icons
-          const Icon(Icons.content_cut, size: 16, color: Color(0xFF374151)),
-          Container(
-            width: 22,
-            height: 10,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(2),
-              border: Border.all(color: const Color(0xFF9CA3AF), width: 1),
-            ),
-            child: const Center(
-              child: Text(
-                '0.5',
-                style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold),
+  @override
+  void dispose() {
+    _clock?.cancel();
+    _snip.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final station = widget.station;
+    return Semantics(
+      button: true,
+      label: _semanticLabel(station),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onTap,
+        child: Column(
+          crossAxisAlignment: widget.isLeftWall
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: CustomPaint(
+                size: Size.infinite,
+                painter: StationPainter(
+                  status: station.status,
+                  mirrored: !widget.isLeftWall,
+                  animation: _snip,
+                ),
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 2, 28, 0),
+              child: _NameTag(station: station),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildChairArea() {
-    return SizedBox(
-      width: 100,
-      height: 80,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Station ID watermark
-          Positioned(
-            top: 0,
-            left: isLeftWall ? 0 : null,
-            right: isLeftWall ? null : 0,
-            child: Text(
-              '#${station.chairNumber}',
-              style: const TextStyle(
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF9CA3AF),
-              ),
-            ),
-          ),
-
-          // Central Barber Chair
-          CustomPaint(
-            size: const Size(60, 50),
-            painter: _BarberChairPainter(status: station.status),
-          ),
-
-          // Occupied Indicator: Barber + Client
-          if (station.status == ChairStatus.occupied)
-            Positioned(
-              bottom: 2,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      station.activeClientName ?? 'Client',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'by ${station.activeBarberName ?? 'Barber'}',
-                    style: const TextStyle(
-                      fontSize: 8,
-                      color: Color(0xFF4B5563),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // Available Indicator: Barber Ready
-          if (station.status == ChairStatus.available)
-            Positioned(
-              bottom: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: const Color(0xFF86EFAC)),
-                ),
-                child: Text(
-                  station.activeBarberName ?? 'Ready',
-                  style: const TextStyle(
-                    color: Color(0xFF166534),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-
-          // Empty Chair: Tap to Assign
-          if (station.status == ChairStatus.empty)
-            Positioned(
-              bottom: 4,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F4F6),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.add, size: 10, color: Color(0xFF6B7280)),
-                    SizedBox(width: 2),
-                    Text(
-                      'Assign',
-                      style: TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  static String _semanticLabel(Station s) => switch (s.status) {
+    ChairStatus.empty =>
+      'Chair ${s.chairNumber}, free. Tap to assign a barber.',
+    ChairStatus.cleaning => 'Chair ${s.chairNumber}, cleaning.',
+    ChairStatus.available =>
+      'Chair ${s.chairNumber}, ${s.activeBarberName ?? 'barber'} ready. Tap to seat a client.',
+    ChairStatus.occupied =>
+      'Chair ${s.chairNumber}, ${s.activeBarberName ?? 'barber'} serving '
+          '${s.activeClientName ?? 'a client'}. Tap to check out.',
+  };
 }
 
-class _BarberChairPainter extends CustomPainter {
-  const _BarberChairPainter({required this.status});
-  final ChairStatus status;
+class _NameTag extends StatelessWidget {
+  const _NameTag({required this.station});
+
+  final Station station;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final paintFill = Paint()
-      ..color = status == ChairStatus.empty
-          ? const Color(0xFFE5E7EB)
-          : const Color(0xFF1F2937)
-      ..style = PaintingStyle.fill;
-
-    final paintStroke = Paint()
-      ..color = Colors.black
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-
-    // Chair base circle
-    canvas.drawCircle(Offset(size.width / 2, size.height * 0.7), 16, paintFill);
-    canvas.drawCircle(
-      Offset(size.width / 2, size.height * 0.7),
-      16,
-      paintStroke,
-    );
-
-    // Chair backrest
-    final backrestRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(size.width / 2, size.height * 0.35),
-        width: 32,
-        height: 18,
+  Widget build(BuildContext context) {
+    final number = '#${station.chairNumber}';
+    final (text, background, foreground, dot) = switch (station.status) {
+      ChairStatus.empty => (
+        '$number · Tap to assign',
+        const Color(0xFFF4F4F5),
+        const Color(0xFF6B7280),
+        null,
       ),
-      const Radius.circular(6),
-    );
-    canvas.drawRRect(backrestRect, paintFill);
-    canvas.drawRRect(backrestRect, paintStroke);
-
-    // Headrest
-    final headrestRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(
-        center: Offset(size.width / 2, size.height * 0.15),
-        width: 18,
-        height: 6,
+      ChairStatus.cleaning => (
+        '$number · Cleaning',
+        const Color(0xFFFEF3C7),
+        const Color(0xFF92400E),
+        const Color(0xFFF59E0B),
       ),
-      const Radius.circular(3),
-    );
-    canvas.drawRRect(headrestRect, paintFill);
-    canvas.drawRRect(headrestRect, paintStroke);
+      ChairStatus.available => (
+        '$number · ${station.activeBarberName ?? 'Ready'}',
+        Colors.white,
+        const Color(0xFF111111),
+        const Color(0xFF10B981),
+      ),
+      ChairStatus.occupied => (
+        '$number · ${station.activeClientName ?? 'Client'} · ${_elapsed()}',
+        const Color(0xFF111111),
+        Colors.white,
+        null,
+      ),
+    };
 
-    // Footrest
-    canvas.drawLine(
-      Offset(size.width / 2 - 12, size.height * 0.95),
-      Offset(size.width / 2 + 12, size.height * 0.95),
-      paintStroke,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: const Color(0xFF111111), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot != null) ...[
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(color: dot, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: foreground,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  @override
-  bool shouldRepaint(covariant _BarberChairPainter oldDelegate) =>
-      oldDelegate.status != status;
+  String _elapsed() {
+    final start = station.serviceStartTime;
+    if (start == null) return 'now';
+    final minutes = DateTime.now().difference(start).inMinutes;
+    return minutes < 1 ? 'now' : '${minutes}m';
+  }
 }
