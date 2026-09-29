@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/demo/demo_seeder.dart';
 import '../../../core/errors/app_exception.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/repositories/floor_plan_repository.dart';
+import '../../../core/repositories/queue_repository.dart';
 import '../../../core/repositories/shop_repository.dart';
 import '../domain/owner_account.dart';
 import '../domain/shop_profile.dart';
@@ -12,6 +15,16 @@ final shopRepositoryProvider = Provider<ShopRepository>((ref) {
     dbService: ref.watch(databaseServiceProvider),
     passwordHasher: ref.watch(passwordHasherProvider),
     sessionStorage: ref.watch(sessionStorageProvider),
+  );
+});
+
+final demoSeederProvider = Provider<DemoSeeder>((ref) {
+  final db = ref.watch(databaseServiceProvider);
+  return DemoSeeder(
+    dbService: db,
+    shops: ref.watch(shopRepositoryProvider),
+    floor: FloorPlanRepository(dbService: db),
+    queue: QueueRepository(dbService: db),
   );
 });
 
@@ -113,6 +126,18 @@ class AuthNotifier extends Notifier<AuthState> {
       state = state.copyWith(isLoading: false, errorMessage: describeError(e));
       return false;
     }
+  }
+
+  /// Creates the demo shop on this device if needed, then signs into it.
+  Future<bool> loginDemo() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await ref.read(demoSeederProvider).ensureDemoAccount();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, errorMessage: describeError(e));
+      return false;
+    }
+    return login(email: DemoSeeder.email, password: DemoSeeder.password);
   }
 
   void clearError() {

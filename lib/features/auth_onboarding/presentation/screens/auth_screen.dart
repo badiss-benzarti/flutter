@@ -1,3 +1,4 @@
+import 'package:barber_shop_owner/core/demo/demo_seeder.dart';
 import 'package:barber_shop_owner/core/repositories/shop_repository.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
 import 'package:flutter/material.dart';
@@ -199,6 +200,42 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ),
                   ),
+                  if (!_isRegistering) ...[
+                    const SizedBox(height: 8),
+                    const Row(
+                      children: [
+                        Expanded(child: Divider()),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            'or',
+                            style: TextStyle(color: Color(0xFF6B7280)),
+                          ),
+                        ),
+                        Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.black, width: 1.5),
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
+                      icon: const Icon(Icons.storefront_outlined),
+                      label: const Text('Explore the demo shop'),
+                      onPressed: authState.isLoading
+                          ? null
+                          : () => ref.read(authProvider.notifier).loginDemo(),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Sample shop with a month of sales. '
+                      'Sign in later with ${DemoSeeder.email} / ${DemoSeeder.password}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: Color(0xFF6B7280)),
+                    ),
+                  ],
                 ],
               ),
             ),
