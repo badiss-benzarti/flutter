@@ -1,20 +1,18 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
-/// A vintage barbershop marquee sign: red banner in a gold frame lined with
-/// twinkling bulbs, barber poles on both sides, a scissors badge on top and
-/// a ribbon underneath. Shows the salon [name].
+/// The salon's name plate, drawn as a clipper guard: glossy black comb with
+/// teeth on top, a brushed-steel plate with gold trim and chrome rivets in
+/// the lower part carrying the engraved [name], and the metal clip below.
 class SalonSign extends StatefulWidget {
   const SalonSign({super.key, required this.name, this.established});
 
   final String name;
 
-  /// Year shown on the ribbon ("EST. 2026"); omitted when null.
+  /// Year engraved under the name ("EST. 2026"); omitted when null.
   final int? established;
 
   /// Width / height of the sign.
-  static const double aspectRatio = 2.35;
+  static const double aspectRatio = 1.75;
 
   @override
   State<SalonSign> createState() => _SalonSignState();
@@ -22,20 +20,21 @@ class SalonSign extends StatefulWidget {
 
 class _SalonSignState extends State<SalonSign>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _lights = AnimationController(
+  /// Drives the light glint that sweeps across the steel plate.
+  late final AnimationController _shine = AnimationController(
     vsync: this,
-    duration: const Duration(seconds: 3),
+    duration: const Duration(seconds: 5),
   )..repeat();
 
   @override
   void dispose() {
-    _lights.dispose();
+    _shine.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final ribbon = widget.established == null
+    final subtitle = widget.established == null
         ? 'BARBERSHOP'
         : 'BARBERSHOP · EST. ${widget.established}';
 
@@ -49,41 +48,46 @@ class _SalonSignState extends State<SalonSign>
             builder: (context, constraints) {
               final w = constraints.maxWidth;
               final h = constraints.maxHeight;
+              final plate = _GuardGeometry(Size(w, h)).plate;
               return Stack(
                 children: [
                   Positioned.fill(
-                    child: CustomPaint(painter: _SignPainter(_lights)),
+                    child: CustomPaint(painter: _GuardPainter(_shine)),
                   ),
-                  // Salon name.
+                  // Engraved salon name, between the rivets.
                   Positioned(
-                    left: w * 0.17,
-                    right: w * 0.17,
-                    top: h * 0.27,
-                    height: h * 0.40,
+                    left: plate.left + plate.width * 0.15,
+                    right: w - plate.right + plate.width * 0.15,
+                    top: plate.top + plate.height * 0.08,
+                    height: plate.height * 0.6,
                     child: Center(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: _GoldTitle(_balancedLines(widget.name.trim())),
+                        child: _Engraved(
+                          _balancedLines(widget.name.trim()),
+                          style: const TextStyle(
+                            fontFamily: 'Rye',
+                            fontSize: 40,
+                            height: 1.05,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                  // Ribbon text.
                   Positioned(
-                    left: w * 0.25,
-                    right: w * 0.25,
-                    top: h * 0.735,
-                    height: h * 0.17,
+                    left: plate.left + plate.width * 0.15,
+                    right: w - plate.right + plate.width * 0.15,
+                    top: plate.top + plate.height * 0.68,
+                    height: plate.height * 0.2,
                     child: Center(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(
-                          ribbon,
-                          maxLines: 1,
+                        child: _Engraved(
+                          subtitle,
                           style: const TextStyle(
-                            fontFamily: 'Rye',
                             fontSize: 14,
-                            letterSpacing: 1.2,
-                            color: Color(0xFF7A1422),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 2,
                           ),
                         ),
                       ),
@@ -100,7 +104,7 @@ class _SalonSignState extends State<SalonSign>
 }
 
 /// Splits long names over two lines at the space closest to the middle, so
-/// they stay large enough to read on the sign.
+/// they stay large enough to read.
 String _balancedLines(String name) {
   const maxSingleLine = 16;
   if (name.length <= maxSingleLine || !name.contains(' ')) return name;
@@ -114,324 +118,246 @@ String _balancedLines(String name) {
   return '${name.substring(0, best)}\n${name.substring(best + 1)}';
 }
 
-/// Gold lettering with a dark outline and drop shadow.
-class _GoldTitle extends StatelessWidget {
-  const _GoldTitle(this.text);
+/// Text that looks engraved into metal: dark letters with a light edge
+/// underneath.
+class _Engraved extends StatelessWidget {
+  const _Engraved(this.text, {required this.style});
 
   final String text;
-
-  static const _gold = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0xFFFFF3B0), Color(0xFFFFD34D), Color(0xFFE09A1B)],
-    stops: [0.0, 0.45, 1.0],
-  );
+  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
-    const base = TextStyle(fontFamily: 'Rye', fontSize: 40, height: 1.1);
-    return Stack(
-      children: [
-        Text(
-          text,
-          textAlign: TextAlign.center,
-          style: base.copyWith(
-            foreground: Paint()
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 6
-              ..strokeJoin = StrokeJoin.round
-              ..color = const Color(0xFF3A0710),
-            shadows: const [
-              Shadow(
-                color: Color(0x80000000),
-                offset: Offset(0, 3),
-                blurRadius: 3,
-              ),
-            ],
-          ),
-        ),
-        ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback: _gold.createShader,
-          child: Text(
-            text,
-            textAlign: TextAlign.center,
-            style: base.copyWith(color: Colors.white),
-          ),
-        ),
-      ],
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: style.copyWith(
+        color: const Color(0xFF23272B),
+        shadows: const [
+          Shadow(color: Color(0xCCFFFFFF), offset: Offset(0, 1.2)),
+          Shadow(color: Color(0x40000000), offset: Offset(0, -0.6)),
+        ],
+      ),
     );
   }
 }
 
-class _SignPainter extends CustomPainter {
-  _SignPainter(this.lights) : super(repaint: lights);
+/// Shared layout of the guard's parts, relative to the sign size.
+class _GuardGeometry {
+  _GuardGeometry(this.size);
 
-  final Animation<double> lights;
+  final Size size;
 
-  static const _darkRed = Color(0xFF5E0B17);
-  static const _red = Color(0xFFB3202F);
-  static const _outline = Color(0xFF2B0509);
-  static const _cream = Color(0xFFFFF4DC);
+  double get w => size.width;
+  double get h => size.height;
+
+  Rect get body => Rect.fromLTRB(w * 0.03, h * 0.27, w * 0.97, h * 0.86);
+  double get teethTop => h * 0.03;
+  Rect get plate => Rect.fromLTRB(w * 0.1, h * 0.42, w * 0.9, h * 0.79);
+  Rect get clip => Rect.fromLTRB(w * 0.4, h * 0.8, w * 0.6, h * 0.985);
+}
+
+class _GuardPainter extends CustomPainter {
+  _GuardPainter(this.shine) : super(repaint: shine);
+
+  final Animation<double> shine;
+
+  static const _outline = Color(0xFF050505);
+  static const _gold = Color(0xFFC9A227);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
+    final g = _GuardGeometry(size);
 
-    _paintPole(canvas, Rect.fromLTWH(0, h * 0.22, w * 0.07, h * 0.56));
-    _paintPole(canvas, Rect.fromLTWH(w * 0.93, h * 0.22, w * 0.07, h * 0.56));
+    _paintClip(canvas, g);
+    _paintBody(canvas, g);
+    _paintPlate(canvas, g);
+  }
 
-    // Banner: gold frame, red field, cream pinstripe.
-    final frame = _bannerPath(
-      Rect.fromLTRB(w * 0.075, h * 0.1, w * 0.925, h * 0.86),
+  void _paintClip(Canvas canvas, _GuardGeometry g) {
+    final clip = RRect.fromRectAndCorners(
+      g.clip,
+      bottomLeft: Radius.circular(g.clip.height * 0.35),
+      bottomRight: Radius.circular(g.clip.height * 0.35),
     );
-    final field = _bannerPath(
-      Rect.fromLTRB(w * 0.11, h * 0.18, w * 0.89, h * 0.8),
-    );
-    final bulbTrack = _bannerPath(
-      Rect.fromLTRB(w * 0.093, h * 0.14, w * 0.907, h * 0.83),
-    );
+    canvas
+      ..drawRRect(clip, Paint()..shader = _steel(g.clip))
+      ..drawRRect(clip, _stroke(_outline, 1.5))
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(g.clip.center.dx, g.clip.top + g.clip.height * 0.6),
+            width: g.clip.width * 0.55,
+            height: g.clip.height * 0.28,
+          ),
+          Radius.circular(g.clip.height * 0.14),
+        ),
+        Paint()..color = const Color(0xFF3B4046),
+      );
+  }
 
-    canvas.drawShadow(frame, Colors.black, 6, false);
+  void _paintBody(Canvas canvas, _GuardGeometry g) {
+    final body = g.body;
+    const teeth = 17;
+    final pitch = body.width / teeth;
+    final toothWidth = pitch * 0.6;
+
+    final shape = Path()
+      ..addRRect(
+        RRect.fromRectAndCorners(
+          body,
+          topLeft: Radius.circular(body.height * 0.06),
+          topRight: Radius.circular(body.height * 0.06),
+          bottomLeft: Radius.circular(body.height * 0.3),
+          bottomRight: Radius.circular(body.height * 0.3),
+        ),
+      );
+    for (var i = 0; i < teeth; i++) {
+      final left = body.left + pitch * i + (pitch - toothWidth) / 2;
+      shape.addRRect(
+        RRect.fromRectAndCorners(
+          Rect.fromLTRB(left, g.teethTop, left + toothWidth, body.top + 4),
+          topLeft: Radius.circular(toothWidth * 0.45),
+          topRight: Radius.circular(toothWidth * 0.45),
+        ),
+      );
+    }
+
+    canvas.drawShadow(shape, Colors.black, 8, false);
     canvas.drawPath(
-      frame,
+      shape,
+      Paint()
+        ..shader =
+            const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFF3A3A3D), Color(0xFF151517), Color(0xFF050506)],
+              stops: [0.0, 0.45, 1.0],
+            ).createShader(
+              Rect.fromLTRB(body.left, g.teethTop, body.right, body.bottom),
+            ),
+    );
+
+    // Gloss on the teeth and along the top of the body.
+    canvas.save();
+    canvas.clipPath(shape);
+    canvas.drawRect(
+      Rect.fromLTRB(
+        body.left,
+        g.teethTop,
+        body.right,
+        body.top + body.height * 0.1,
+      ),
+      Paint()
+        ..shader =
+            LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.white.withValues(alpha: 0.22),
+                Colors.white.withValues(alpha: 0.02),
+              ],
+            ).createShader(
+              Rect.fromLTRB(body.left, g.teethTop, body.right, body.top),
+            ),
+    );
+    canvas.restore();
+
+    canvas.drawPath(shape, _stroke(_outline, 1.5));
+    // Gold pinstripe where the teeth meet the body.
+    canvas.drawLine(
+      Offset(body.left + body.width * 0.02, body.top + body.height * 0.06),
+      Offset(body.right - body.width * 0.02, body.top + body.height * 0.06),
+      _stroke(_gold.withValues(alpha: 0.9), 1.4),
+    );
+  }
+
+  void _paintPlate(Canvas canvas, _GuardGeometry g) {
+    final rect = g.plate;
+    final plate = RRect.fromRectAndRadius(
+      rect,
+      Radius.circular(rect.height * 0.16),
+    );
+
+    // Gold trim, then the brushed-steel face.
+    canvas.drawRRect(
+      plate.inflate(rect.height * 0.045),
       Paint()
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFE08A), Color(0xFFD9A233), Color(0xFF9C6A12)],
-        ).createShader(frame.getBounds()),
+          colors: [Color(0xFFFFE08A), Color(0xFFC9A227), Color(0xFF8A6512)],
+        ).createShader(rect),
     );
-    canvas.drawPath(frame, _stroke(_outline, 2));
-    canvas.drawPath(
-      field,
-      Paint()
-        ..shader = const RadialGradient(
-          center: Alignment(0, -0.2),
-          radius: 0.9,
-          colors: [_red, _darkRed],
-        ).createShader(field.getBounds()),
-    );
-    canvas.drawPath(field, _stroke(_outline, 2));
-    canvas.drawPath(
-      _bannerPath(Rect.fromLTRB(w * 0.125, h * 0.215, w * 0.875, h * 0.77)),
-      _stroke(_cream.withValues(alpha: 0.55), 1),
-    );
-
-    _paintBulbs(canvas, bulbTrack, math.max(4.0, h * 0.032));
-    _paintRibbon(canvas, size);
-    _paintBadge(canvas, Offset(w * 0.5, h * 0.105), h * 0.1);
-  }
-
-  /// Banner outline: arched top, softly flared sides, curved bottom.
-  Path _bannerPath(Rect r) {
-    return Path()
-      ..moveTo(r.left, r.top + r.height * 0.28)
-      ..quadraticBezierTo(
-        r.center.dx,
-        r.top - r.height * 0.22,
-        r.right,
-        r.top + r.height * 0.28,
-      )
-      ..quadraticBezierTo(
-        r.right + r.width * 0.025,
-        r.center.dy,
-        r.right,
-        r.bottom - r.height * 0.12,
-      )
-      ..quadraticBezierTo(
-        r.center.dx,
-        r.bottom + r.height * 0.1,
-        r.left,
-        r.bottom - r.height * 0.12,
-      )
-      ..quadraticBezierTo(
-        r.left - r.width * 0.025,
-        r.center.dy,
-        r.left,
-        r.top + r.height * 0.28,
-      )
-      ..close();
-  }
-
-  void _paintBulbs(Canvas canvas, Path track, double radius) {
-    final phase = (lights.value * 6).floor();
-    for (final metric in track.computeMetrics()) {
-      final count = (metric.length / (radius * 4.2)).floor();
-      for (var i = 0; i < count; i++) {
-        final pos = metric
-            .getTangentForOffset(metric.length * i / count)!
-            .position;
-        final lit = (i + phase) % 3 != 0;
-        if (lit) {
-          canvas.drawCircle(
-            pos,
-            radius * 2.2,
-            Paint()
-              ..shader =
-                  RadialGradient(
-                    colors: [
-                      const Color(0xFFFFF1A8).withValues(alpha: 0.9),
-                      const Color(0x00FFD34D),
-                    ],
-                  ).createShader(
-                    Rect.fromCircle(center: pos, radius: radius * 2.2),
-                  ),
-          );
-        }
-        canvas
-          ..drawCircle(
-            pos,
-            radius,
-            Paint()
-              ..color = lit ? const Color(0xFFFFFBE6) : const Color(0xFFB88A2A),
-          )
-          ..drawCircle(pos, radius, _stroke(_outline, 1));
-      }
-    }
-  }
-
-  void _paintRibbon(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final top = h * 0.72;
-    final bottom = h * 0.92;
-    final tailTop = top + (bottom - top) * 0.25;
-
-    // Folded tails behind the ribbon ends.
-    for (final dir in const [-1.0, 1.0]) {
-      final inner = w * 0.5 + dir * w * 0.24;
-      final outer = w * 0.5 + dir * w * 0.32;
-      final tail = Path()
-        ..moveTo(inner, tailTop)
-        ..lineTo(outer, tailTop)
-        ..lineTo(outer - dir * w * 0.025, (tailTop + bottom + 6) / 2)
-        ..lineTo(outer, bottom + 6)
-        ..lineTo(inner, bottom + 6)
-        ..close();
-      canvas
-        ..drawPath(tail, Paint()..color = const Color(0xFFE2CFA6))
-        ..drawPath(tail, _stroke(_outline, 1.5));
-    }
-
-    final ribbon = Path()
-      ..moveTo(w * 0.24, top)
-      ..quadraticBezierTo(w * 0.5, top + h * 0.05, w * 0.76, top)
-      ..lineTo(w * 0.76, bottom)
-      ..quadraticBezierTo(w * 0.5, bottom + h * 0.05, w * 0.24, bottom)
-      ..close();
-    canvas
-      ..drawPath(ribbon, Paint()..color = _cream)
-      ..drawPath(ribbon, _stroke(_outline, 2));
-  }
-
-  void _paintBadge(Canvas canvas, Offset center, double radius) {
-    canvas
-      ..drawCircle(
-        center,
-        radius * 1.25,
-        Paint()
-          ..shader =
-              const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFE08A), Color(0xFF9C6A12)],
-              ).createShader(
-                Rect.fromCircle(center: center, radius: radius * 1.25),
-              ),
-      )
-      ..drawCircle(center, radius * 1.25, _stroke(_outline, 1.5))
-      ..drawCircle(center, radius, Paint()..color = _darkRed)
-      ..drawCircle(center, radius, _stroke(_cream, 1));
-
-    final icon = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(Icons.content_cut.codePoint),
-        style: TextStyle(
-          fontFamily: Icons.content_cut.fontFamily,
-          package: Icons.content_cut.fontPackage,
-          fontSize: radius * 1.35,
-          color: _cream,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    icon.paint(canvas, center - Offset(icon.width / 2, icon.height / 2));
-  }
-
-  /// Classic red, white and blue barber pole with scrolling stripes.
-  void _paintPole(Canvas canvas, Rect r) {
-    final capHeight = r.height * 0.12;
-    final tube = Rect.fromLTRB(
-      r.left + r.width * 0.12,
-      r.top + capHeight,
-      r.right - r.width * 0.12,
-      r.bottom - capHeight,
-    );
-    final tubeShape = RRect.fromRectAndRadius(
-      tube,
-      Radius.circular(tube.width / 2),
-    );
+    canvas.drawRRect(plate, Paint()..shader = _steel(rect));
 
     canvas.save();
-    canvas.clipRRect(tubeShape);
-    canvas.drawRect(tube, Paint()..color = Colors.white);
-    final stripe = tube.width * 0.55;
-    final shift = lights.value * stripe * 4;
-    var i = 0;
-    for (
-      var y = tube.top - tube.width * 2 - stripe * 4 + shift;
-      y < tube.bottom;
-      y += stripe
-    ) {
-      final color = i.isEven ? _red : const Color(0xFF1F4E9C);
-      i++;
-      if (i % 3 == 0) continue; // White gap every third band.
-      final band = Path()
-        ..moveTo(tube.left, y)
-        ..lineTo(tube.right, y + tube.width)
-        ..lineTo(tube.right, y + tube.width + stripe * 0.6)
-        ..lineTo(tube.left, y + stripe * 0.6)
-        ..close();
-      canvas.drawPath(band, Paint()..color = color);
+    canvas.clipRRect(plate);
+    // Brushed grain.
+    final grain = Paint()
+      ..color = Colors.black.withValues(alpha: 0.05)
+      ..strokeWidth = 0.6;
+    for (var y = rect.top + 1.5; y < rect.bottom; y += 2.2) {
+      canvas.drawLine(Offset(rect.left, y), Offset(rect.right, y), grain);
     }
-    // Glass highlight.
-    canvas.drawRect(
-      Rect.fromLTWH(
-        tube.left + tube.width * 0.18,
-        tube.top,
-        tube.width * 0.16,
-        tube.height,
-      ),
-      Paint()..color = Colors.white.withValues(alpha: 0.45),
-    );
+    // Moving glint: sweeps across during the first third of each cycle.
+    final t = shine.value / 0.35;
+    if (t <= 1) {
+      final x = rect.left - rect.width * 0.3 + rect.width * 1.6 * t;
+      final band = Path()
+        ..moveTo(x, rect.top)
+        ..lineTo(x + rect.width * 0.12, rect.top)
+        ..lineTo(x - rect.width * 0.02, rect.bottom)
+        ..lineTo(x - rect.width * 0.14, rect.bottom)
+        ..close();
+      canvas.drawPath(
+        band,
+        Paint()..color = Colors.white.withValues(alpha: 0.45),
+      );
+    }
     canvas.restore();
-    canvas.drawRRect(tubeShape, _stroke(_outline, 1.5));
 
-    // Gold caps with round finials.
-    final gold = Paint()..color = const Color(0xFFD9A233);
-    for (final top in [true, false]) {
-      final cap = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          r.left,
-          top ? r.top + capHeight * 0.35 : r.bottom - capHeight,
-          r.width,
-          capHeight * 0.65,
-        ),
-        Radius.circular(capHeight * 0.2),
+    canvas
+      ..drawRRect(plate, _stroke(const Color(0xFF4A5057), 1.2))
+      ..drawRRect(
+        plate.deflate(2),
+        _stroke(Colors.white.withValues(alpha: 0.7), 0.8),
       );
-      final knob = Offset(
-        r.center.dx,
-        top ? r.top + capHeight * 0.25 : r.bottom + capHeight * 0.1,
-      );
+
+    // Chrome rivets at both ends of the plate.
+    final r = rect.height * 0.12;
+    for (final x in [
+      rect.left + rect.width * 0.075,
+      rect.right - rect.width * 0.075,
+    ]) {
+      final c = Offset(x, rect.center.dy);
       canvas
-        ..drawRRect(cap, gold)
-        ..drawRRect(cap, _stroke(_outline, 1.5))
-        ..drawCircle(knob, r.width * 0.22, gold)
-        ..drawCircle(knob, r.width * 0.22, _stroke(_outline, 1.5));
+        ..drawCircle(
+          c,
+          r,
+          Paint()
+            ..shader = const RadialGradient(
+              center: Alignment(-0.4, -0.5),
+              colors: [Colors.white, Color(0xFFB9C0C8), Color(0xFF5F666E)],
+              stops: [0.0, 0.55, 1.0],
+            ).createShader(Rect.fromCircle(center: c, radius: r)),
+        )
+        ..drawCircle(c, r, _stroke(const Color(0xFF3B4046), 1));
     }
   }
+
+  Shader _steel(Rect rect) => const LinearGradient(
+    begin: Alignment(-1, -0.4),
+    end: Alignment(1, 0.4),
+    colors: [
+      Color(0xFFD9DEE3),
+      Color(0xFFF7F8FA),
+      Color(0xFFB8BFC7),
+      Color(0xFFEEF1F4),
+      Color(0xFFA9B1BA),
+    ],
+    stops: [0.0, 0.3, 0.55, 0.8, 1.0],
+  ).createShader(rect);
 
   Paint _stroke(Color color, double width) => Paint()
     ..color = color
@@ -440,5 +366,5 @@ class _SignPainter extends CustomPainter {
     ..strokeJoin = StrokeJoin.round;
 
   @override
-  bool shouldRepaint(_SignPainter oldDelegate) => false;
+  bool shouldRepaint(_GuardPainter oldDelegate) => false;
 }

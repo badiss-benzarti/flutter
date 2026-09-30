@@ -157,9 +157,9 @@ class FloorPlanScreen extends ConsumerWidget {
 
   static const double _ceilingHeight = 64;
   static const double _wallWidth = 18;
-  static const double _hudHeight = 50;
+  static const double _hudHeight = 70;
   static const double _couchAreaHeight = 196;
-  static const double _minRowHeight = 112;
+  static const double _minRowHeight = 106;
   static const double _maxRowHeight = 150;
 
   void _handleStationTap(BuildContext context, WidgetRef ref, Station station) {
