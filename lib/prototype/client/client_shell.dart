@@ -462,7 +462,7 @@ class _ProfileScreenState extends State<_ProfileScreen> {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.swap_horiz),
-                  title: const Text('Switch role (prototype)'),
+                  title: const Text('Change space'),
                   onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
                 ),
               ],

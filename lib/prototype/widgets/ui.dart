@@ -177,7 +177,7 @@ class Avatar extends StatelessWidget {
   }
 }
 
-/// Thin banner reminding testers that this is sample data.
+/// Thin banner: this space is a preview running on sample data.
 class PrototypeBanner extends StatelessWidget {
   const PrototypeBanner({super.key});
 
@@ -188,7 +188,7 @@ class PrototypeBanner extends StatelessWidget {
       color: gold,
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: const Text(
-        'PROTOTYPE · SAMPLE DATA',
+        'PREVIEW · SAMPLE DATA',
         textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 10,

@@ -1,6 +1,7 @@
 import 'package:barber_shop_owner/core/demo/demo_seeder.dart';
 import 'package:barber_shop_owner/core/repositories/shop_repository.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
+import 'package:barber_shop_owner/features/welcome/entry_role.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -45,6 +46,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.black,
+                        padding: EdgeInsets.zero,
+                      ),
+                      onPressed: () =>
+                          ref.read(entryRoleProvider.notifier).reset(),
+                      icon: const Icon(Icons.arrow_back, size: 18),
+                      label: const Text('Who are you?'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   // App Icon / Logo
                   Container(
                     width: 64,
