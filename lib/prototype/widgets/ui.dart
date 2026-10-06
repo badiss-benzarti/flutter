@@ -29,12 +29,16 @@ class InkCard extends StatelessWidget {
     this.padding,
     this.onTap,
     this.color,
+    this.borderColor,
   });
 
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final VoidCallback? onTap;
   final Color? color;
+
+  /// Outline color; defaults to the theme card border.
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +47,9 @@ class InkCard extends StatelessWidget {
       color: color ?? Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: AppTheme.surfaceBorder, width: 1.5),
+        side: borderColor == null
+            ? const BorderSide(color: AppTheme.surfaceBorder, width: 1.5)
+            : BorderSide(color: borderColor!, width: 2.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

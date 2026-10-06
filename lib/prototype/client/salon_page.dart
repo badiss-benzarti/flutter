@@ -121,7 +121,9 @@ class _BarbersTab extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: InkCard(
-              color: b.name == highlightBarber ? const Color(0xFFFFF4CF) : null,
+              borderColor: b.name == highlightBarber
+                  ? const Color(0xFF10B981)
+                  : null,
               onTap: () => showBarberSheet(context, salon, b),
               child: Row(
                 children: [

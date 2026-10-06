@@ -380,7 +380,7 @@ class _SocialScreenState extends State<_SocialScreen> {
           TextSpan(text: name.substring(0, at)),
           TextSpan(
             text: name.substring(at, at + q.length),
-            style: const TextStyle(backgroundColor: Color(0xFFFFE08A)),
+            style: const TextStyle(backgroundColor: Color(0xFFDCFCE7)),
           ),
           TextSpan(text: name.substring(at + q.length)),
         ],

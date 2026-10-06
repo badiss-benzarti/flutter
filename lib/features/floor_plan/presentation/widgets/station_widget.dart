@@ -22,10 +22,13 @@ class StationWidget extends StatefulWidget {
   /// Read-only view for clients: no owner actions in the labels.
   final bool publicView;
 
-  /// Marks the barber the viewer is looking for (gold frame and tag).
+  /// Marks the barber the viewer is looking for (green outline and tag).
   final bool highlighted;
 
-  static const highlightColor = Color(0xFFC9A227);
+  static const highlightColor = Color(0xFF10B981);
+  static const _highlightTagFill = Color(0xFFDCFCE7);
+  static const _highlightTagBorder = Color(0xFF86EFAC);
+  static const _highlightText = Color(0xFF166534);
 
   @override
   State<StationWidget> createState() => _StationWidgetState();
@@ -93,10 +96,8 @@ class _StationWidgetState extends State<StationWidget>
               child: DecoratedBox(
                 decoration: widget.highlighted
                     ? BoxDecoration(
-                        color: StationWidget.highlightColor.withValues(
-                          alpha: 0.14,
-                        ),
-                        borderRadius: BorderRadius.circular(18),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: StationWidget.highlightColor,
                           width: 2.5,
@@ -182,9 +183,11 @@ class _NameTag extends StatelessWidget {
       ),
     };
 
+    var border = const Color(0xFF111111);
     if (highlighted) {
-      background = StationWidget.highlightColor;
-      foreground = const Color(0xFF111111);
+      background = StationWidget._highlightTagFill;
+      foreground = StationWidget._highlightText;
+      border = StationWidget._highlightTagBorder;
       dot = null;
     }
 
@@ -193,15 +196,12 @@ class _NameTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: const Color(0xFF111111), width: 1.2),
+        border: Border.all(color: border, width: 1.2),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (highlighted) ...[
-            Icon(Icons.star_rounded, size: 12, color: foreground),
-            const SizedBox(width: 3),
-          ] else if (dot != null) ...[
+          if (dot != null) ...[
             Container(
               width: 6,
               height: 6,
