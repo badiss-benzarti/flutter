@@ -156,14 +156,17 @@ class _FinanceBody extends StatelessWidget {
                 icon: Icons.credit_card,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AmountCard(
-                title: 'Transfer',
-                amount: formatMoney(summary.transferTotal),
-                icon: Icons.account_balance_outlined,
+            // Transfers are no longer offered; shown only for old tickets.
+            if (summary.transferTotal > 0) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: AmountCard(
+                  title: 'Transfer',
+                  amount: formatMoney(summary.transferTotal),
+                  icon: Icons.account_balance_outlined,
+                ),
               ),
-            ),
+            ],
           ],
         ),
         const SectionHeading('Barber Payouts'),

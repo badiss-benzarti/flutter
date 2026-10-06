@@ -205,11 +205,9 @@ class DemoSeeder {
             barberCut: barberCut,
             shopCut: FloorPlanRepository.roundMoney(subtotal - barberCut),
             tip: tip,
-            paymentMethod: payRoll < 0.55
+            paymentMethod: payRoll < 0.6
                 ? PaymentMethod.cash
-                : payRoll < 0.9
-                ? PaymentMethod.card
-                : PaymentMethod.transfer,
+                : PaymentMethod.card,
             timestamp: time,
           ).toMap(),
         );

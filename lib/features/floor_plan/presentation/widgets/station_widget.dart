@@ -12,6 +12,7 @@ class StationWidget extends StatefulWidget {
     required this.isLeftWall,
     required this.onTap,
     this.publicView = false,
+    this.highlighted = false,
   });
 
   final Station station;
@@ -20,6 +21,11 @@ class StationWidget extends StatefulWidget {
 
   /// Read-only view for clients: no owner actions in the labels.
   final bool publicView;
+
+  /// Marks the barber the viewer is looking for (gold frame and tag).
+  final bool highlighted;
+
+  static const highlightColor = Color(0xFFC9A227);
 
   @override
   State<StationWidget> createState() => _StationWidgetState();
@@ -84,18 +90,36 @@ class _StationWidgetState extends State<StationWidget>
               : CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: CustomPaint(
-                size: Size.infinite,
-                painter: StationPainter(
-                  status: station.status,
-                  mirrored: !widget.isLeftWall,
-                  animation: _snip,
+              child: DecoratedBox(
+                decoration: widget.highlighted
+                    ? BoxDecoration(
+                        color: StationWidget.highlightColor.withValues(
+                          alpha: 0.14,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(
+                          color: StationWidget.highlightColor,
+                          width: 2.5,
+                        ),
+                      )
+                    : const BoxDecoration(),
+                child: CustomPaint(
+                  size: Size.infinite,
+                  painter: StationPainter(
+                    status: station.status,
+                    mirrored: !widget.isLeftWall,
+                    animation: _snip,
+                  ),
                 ),
               ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 2, 28, 0),
-              child: _NameTag(station: station, publicView: widget.publicView),
+              child: _NameTag(
+                station: station,
+                publicView: widget.publicView,
+                highlighted: widget.highlighted,
+              ),
             ),
           ],
         ),
@@ -116,15 +140,20 @@ class _StationWidgetState extends State<StationWidget>
 }
 
 class _NameTag extends StatelessWidget {
-  const _NameTag({required this.station, required this.publicView});
+  const _NameTag({
+    required this.station,
+    required this.publicView,
+    this.highlighted = false,
+  });
 
   final Station station;
   final bool publicView;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
     final number = '#${station.chairNumber}';
-    final (text, background, foreground, dot) = switch (station.status) {
+    var (text, background, foreground, dot) = switch (station.status) {
       ChairStatus.empty => (
         publicView ? '$number · Free chair' : '$number · Tap to assign',
         const Color(0xFFF4F4F5),
@@ -143,13 +172,21 @@ class _NameTag extends StatelessWidget {
         const Color(0xFF111111),
         const Color(0xFF10B981),
       ),
+      // The tag always names the barber; the client shows in the chair's
+      // sheet (owner) and never in public views.
       ChairStatus.occupied => (
-        '$number · ${station.activeClientName ?? 'Client'} · ${_elapsed()}',
+        '$number · ${station.activeBarberName ?? 'Barber'} · ${_elapsed()}',
         const Color(0xFF111111),
         Colors.white,
         null,
       ),
     };
+
+    if (highlighted) {
+      background = StationWidget.highlightColor;
+      foreground = const Color(0xFF111111);
+      dot = null;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -161,7 +198,10 @@ class _NameTag extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (dot != null) ...[
+          if (highlighted) ...[
+            Icon(Icons.star_rounded, size: 12, color: foreground),
+            const SizedBox(width: 3),
+          ] else if (dot != null) ...[
             Container(
               width: 6,
               height: 6,

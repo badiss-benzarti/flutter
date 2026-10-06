@@ -1,4 +1,13 @@
-enum PaymentMethod { cash, card, transfer }
+enum PaymentMethod {
+  cash,
+  card,
+
+  /// No longer offered at checkout; kept so older tickets still load.
+  transfer;
+
+  /// What the salon accepts at checkout.
+  static const offered = [cash, card];
+}
 
 class ServiceTicket {
   const ServiceTicket({

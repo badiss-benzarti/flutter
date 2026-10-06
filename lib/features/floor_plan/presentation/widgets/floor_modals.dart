@@ -458,7 +458,7 @@ class _CheckoutSheetState extends ConsumerState<_CheckoutSheet> {
         Wrap(
           spacing: 8,
           children: [
-            for (final method in PaymentMethod.values)
+            for (final method in PaymentMethod.offered)
               ChoiceChip(
                 label: Text(_paymentLabel(method)),
                 selected: _paymentMethod == method,

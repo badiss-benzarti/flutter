@@ -405,7 +405,7 @@ class _EarningsScreenState extends State<_EarningsScreen> {
     ('Omar B.', 'Haircut + Beard', 21.0, 0.0, PaymentMethod.cash, 25),
     ('Aziz G.', 'Haircut · VIP', 15.0, 15.0, PaymentMethod.card, 70),
     ('Mehdi T.', 'Haircut', 15.0, 0.0, PaymentMethod.cash, 115),
-    ('Rami H.', 'Beard Trim', 9.0, 0.0, PaymentMethod.transfer, 160),
+    ('Rami H.', 'Beard Trim', 9.0, 0.0, PaymentMethod.card, 160),
   ];
 
   @override

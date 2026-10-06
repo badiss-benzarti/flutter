@@ -9,9 +9,12 @@ import '../widgets/ui.dart';
 
 /// What a client sees after tapping a salon on the map.
 class SalonPage extends StatelessWidget {
-  const SalonPage({super.key, required this.salon});
+  const SalonPage({super.key, required this.salon, this.highlightBarber});
 
   final MockSalon salon;
+
+  /// Barber the client searched for: their chair and card are marked.
+  final String? highlightBarber;
 
   @override
   Widget build(BuildContext context) {
@@ -49,8 +52,8 @@ class SalonPage extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            _LiveTab(salon: salon),
-            _BarbersTab(salon: salon),
+            _LiveTab(salon: salon, highlightBarber: highlightBarber),
+            _BarbersTab(salon: salon, highlightBarber: highlightBarber),
             const _PricesTab(),
             _PhotosTab(salon: salon),
           ],
@@ -64,9 +67,10 @@ class SalonPage extends StatelessWidget {
 }
 
 class _LiveTab extends StatelessWidget {
-  const _LiveTab({required this.salon});
+  const _LiveTab({required this.salon, this.highlightBarber});
 
   final MockSalon salon;
+  final String? highlightBarber;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +86,7 @@ class _LiveTab extends StatelessWidget {
       totalChairs: salon.chairs,
       waitingCount: salon.waiting,
       anonymizeClients: true,
+      highlightBarber: highlightBarber,
       reserveLabel: 'JOIN THE QUEUE',
       onReserveTap: () => showJoinQueue(context, salon),
       onQueueViewTap: () => showJoinQueue(context, salon),
@@ -102,9 +107,10 @@ class _LiveTab extends StatelessWidget {
 }
 
 class _BarbersTab extends StatelessWidget {
-  const _BarbersTab({required this.salon});
+  const _BarbersTab({required this.salon, this.highlightBarber});
 
   final MockSalon salon;
+  final String? highlightBarber;
 
   @override
   Widget build(BuildContext context) {
@@ -115,6 +121,7 @@ class _BarbersTab extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
             child: InkCard(
+              color: b.name == highlightBarber ? const Color(0xFFFFF4CF) : null,
               onTap: () => showBarberSheet(context, salon, b),
               child: Row(
                 children: [

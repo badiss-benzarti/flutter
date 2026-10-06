@@ -28,6 +28,7 @@ class RoomView extends StatelessWidget {
     this.onRefresh,
     this.anonymizeClients = false,
     this.reserveLabel,
+    this.highlightBarber,
   });
 
   final String shopName;
@@ -45,6 +46,9 @@ class RoomView extends StatelessWidget {
 
   /// Overrides the couch button text ("RESERVE WAITING SPOT").
   final String? reserveLabel;
+
+  /// Name of a barber to point out, e.g. the one a client searched for.
+  final String? highlightBarber;
 
   static const double _ceilingHeight = 64;
   static const double _wallWidth = 18;
@@ -96,6 +100,8 @@ class RoomView extends StatelessWidget {
           station: s,
           isLeftWall: isLeftWall,
           publicView: anonymizeClients,
+          highlighted:
+              highlightBarber != null && s.activeBarberName == highlightBarber,
           onTap: onStationTap == null ? () {} : () => onStationTap!(s),
         );
 

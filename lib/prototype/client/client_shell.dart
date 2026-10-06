@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/ui/dashboard_widgets.dart';
 import '../../core/ui/room_navigation_bar.dart';
+import '../../features/floor_plan/domain/station.dart';
 import '../mock_data.dart';
 import '../widgets/ui.dart';
 import 'salon_map_screen.dart';
@@ -189,45 +191,199 @@ class BookingCard extends StatelessWidget {
   }
 }
 
-class _SocialScreen extends StatelessWidget {
+/// Fresh cuts from the city's barbers, with a search to find a barber and
+/// see them live in their salon.
+class _SocialScreen extends StatefulWidget {
   const _SocialScreen();
+
+  @override
+  State<_SocialScreen> createState() => _SocialScreenState();
+}
+
+class _SocialScreenState extends State<_SocialScreen> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  List<(MockBarber, MockSalon)> get _matches {
+    final q = _query.trim().toLowerCase();
+    return [
+      for (final salon in salons)
+        for (final barber in salon.barbers)
+          if ([
+            barber.name,
+            barber.specialty,
+            salon.name,
+            salon.area,
+          ].any((field) => field.toLowerCase().contains(q)))
+            (barber, salon),
+    ];
+  }
+
+  void _openLive(MockSalon salon, String barber) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SalonPage(salon: salon, highlightBarber: barber),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Fresh cuts in Tunis')),
-      body: GridView.builder(
-        padding: const EdgeInsets.all(12),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 10,
-          crossAxisSpacing: 10,
-          childAspectRatio: 0.82,
-        ),
-        itemCount: photos.length,
-        itemBuilder: (context, i) {
-          final p = photos[i];
-          final salon = salons.firstWhere((s) => s.name == p.salon);
-          return GestureDetector(
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => SalonPage(salon: salon)),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: TextField(
+              controller: _search,
+              onChanged: (v) => setState(() => _query = v),
+              decoration: InputDecoration(
+                hintText: 'Search a barber, a style or a salon',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear',
+                        icon: const Icon(Icons.close),
+                        onPressed: () => setState(() {
+                          _search.clear();
+                          _query = '';
+                        }),
+                      ),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: PhotoTile(photo: p)),
-                const SizedBox(height: 4),
-                Text(
-                  p.salon,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                  ),
+          ),
+          Expanded(child: _query.trim().isEmpty ? _feed() : _barberResults()),
+        ],
+      ),
+    );
+  }
+
+  Widget _feed() {
+    return GridView.builder(
+      padding: const EdgeInsets.all(12),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: 0.82,
+      ),
+      itemCount: photos.length,
+      itemBuilder: (context, i) {
+        final p = photos[i];
+        final salon = salons.firstWhere((s) => s.name == p.salon);
+        return GestureDetector(
+          onTap: () => _openLive(salon, p.barber),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: PhotoTile(photo: p)),
+              const SizedBox(height: 4),
+              Text(
+                p.salon,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
                 ),
-              ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _barberResults() {
+    final matches = _matches;
+    if (matches.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: EmptyBox('No barber matches your search.'),
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SectionTitle(
+          matches.length == 1 ? '1 barber' : '${matches.length} barbers',
+        ),
+        for (final (barber, salon) in matches) _resultCard(barber, salon),
+      ],
+    );
+  }
+
+  Widget _resultCard(MockBarber barber, MockSalon salon) {
+    final station = salon.stations
+        .where((s) => s.activeBarberName == barber.name)
+        .firstOrNull;
+    final (where, color) = !salon.open || !barber.onDuty
+        ? ('Not working now', muted)
+        : station == null
+        ? ('In the salon', const Color(0xFF10B981))
+        : station.status == ChairStatus.occupied
+        ? ('Busy at chair #${station.chairNumber}', const Color(0xFFF59E0B))
+        : ('Free at chair #${station.chairNumber}', const Color(0xFF10B981));
+    final cuts = photos.where((p) => p.barber == barber.name).length;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        onTap: () => _openLive(salon, barber.name),
+        leading: Avatar(barber.name, dimmed: !barber.onDuty),
+        title: _highlighted(barber.name),
+        subtitle: Text(
+          '${barber.specialty} · ${salon.name}'
+          '${cuts == 0 ? '' : ' · $cuts cut${cuts == 1 ? '' : 's'}'}',
+          style: const TextStyle(fontSize: 12),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Stars(barber.rating, size: 12),
+            const SizedBox(height: 2),
+            Text(
+              where,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
-          );
-        },
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The barber's name with the searched letters marked in gold.
+  Widget _highlighted(String name) {
+    const base = TextStyle(
+      fontWeight: FontWeight.bold,
+      color: ink,
+      fontSize: 16,
+    );
+    final q = _query.trim().toLowerCase();
+    final at = name.toLowerCase().indexOf(q);
+    if (q.isEmpty || at < 0) return Text(name, style: base);
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: [
+          TextSpan(text: name.substring(0, at)),
+          TextSpan(
+            text: name.substring(at, at + q.length),
+            style: const TextStyle(backgroundColor: Color(0xFFFFE08A)),
+          ),
+          TextSpan(text: name.substring(at + q.length)),
+        ],
       ),
     );
   }
