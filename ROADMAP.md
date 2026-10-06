@@ -10,9 +10,9 @@ Defaults: one app with three roles, French + English, prices in DT, launch
 city Tunis.
 
 ## Phase 0: Preparation
-- [ ] 0.1 Create the Supabase project (Frankfurt), share Project URL + anon key *(owner)*
+- [x] 0.1 Create the Supabase project (Frankfurt), share Project URL + anon key *(owner)*
 - [ ] 0.2 Create a Firebase project for push notifications only *(owner)*
-- [ ] 0.3 Clickable prototype of client and barber screens (`lib/main_prototype.dart`)
+- [x] 0.3 Clickable prototype of client and barber screens (`lib/main_prototype.dart`)
 - [ ] 0.4 Validate the prototype and the VIP rules *(owner)*
 
 ## Phase 1: Cloud foundation
