@@ -20,7 +20,7 @@ city Tunis.
 - [x] 1.2 Row-level security: owner → own shop, barber → own earnings, client → public data
 - [x] 1.3 Supabase auth (email) and salon setup on the server
 - [ ] 1.3b Google sign-in *(needs a Google Cloud setup)*
-- [ ] 1.4 Offline mode for the owner: local SQLite copy that syncs
+- [x] 1.4 Offline mode for the owner: local SQLite copy that syncs
 - [ ] 1.5 Onboarding: place the salon on the map
 - [ ] 1.6 Demo shop on the server; tests against a test database
 
