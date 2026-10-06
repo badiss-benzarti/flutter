@@ -16,8 +16,8 @@ city Tunis.
 - [ ] 0.4 Validate the prototype and the VIP rules *(owner)*
 
 ## Phase 1: Cloud foundation
-- [ ] 1.1 Server schema: shops, chairs, barbers, services, tickets, queue + roles + shop location
-- [ ] 1.2 Row-level security: owner → own shop, barber → own earnings, client → public data
+- [x] 1.1 Server schema: shops, chairs, barbers, services, tickets, queue + roles + shop location
+- [x] 1.2 Row-level security: owner → own shop, barber → own earnings, client → public data
 - [ ] 1.3 Supabase auth (email, Google) and repositories reading/writing the server
 - [ ] 1.4 Offline mode for the owner: local SQLite copy that syncs
 - [ ] 1.5 Onboarding: place the salon on the map
