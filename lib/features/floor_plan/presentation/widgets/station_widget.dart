@@ -11,11 +11,15 @@ class StationWidget extends StatefulWidget {
     required this.station,
     required this.isLeftWall,
     required this.onTap,
+    this.publicView = false,
   });
 
   final Station station;
   final bool isLeftWall;
   final VoidCallback onTap;
+
+  /// Read-only view for clients: no owner actions in the labels.
+  final bool publicView;
 
   @override
   State<StationWidget> createState() => _StationWidgetState();
@@ -91,7 +95,7 @@ class _StationWidgetState extends State<StationWidget>
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(28, 2, 28, 0),
-              child: _NameTag(station: station),
+              child: _NameTag(station: station, publicView: widget.publicView),
             ),
           ],
         ),
@@ -112,16 +116,17 @@ class _StationWidgetState extends State<StationWidget>
 }
 
 class _NameTag extends StatelessWidget {
-  const _NameTag({required this.station});
+  const _NameTag({required this.station, required this.publicView});
 
   final Station station;
+  final bool publicView;
 
   @override
   Widget build(BuildContext context) {
     final number = '#${station.chairNumber}';
     final (text, background, foreground, dot) = switch (station.status) {
       ChairStatus.empty => (
-        '$number · Tap to assign',
+        publicView ? '$number · Free chair' : '$number · Tap to assign',
         const Color(0xFFF4F4F5),
         const Color(0xFF6B7280),
         null,

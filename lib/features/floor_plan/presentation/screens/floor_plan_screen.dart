@@ -1,14 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
 import 'package:barber_shop_owner/features/floor_plan/domain/station.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/floor_plan_providers.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/floor_modals.dart';
-import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/room_shell_painter.dart';
-import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/salon_sign.dart';
-import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/station_widget.dart';
-import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/waiting_couch_widget.dart';
+import 'package:barber_shop_owner/features/floor_plan/presentation/widgets/room/room_view.dart';
 import 'package:barber_shop_owner/features/queue/presentation/queue_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -27,28 +22,6 @@ class FloorPlanScreen extends ConsumerWidget {
       return const Scaffold(body: Center(child: Text('No shop loaded')));
     }
 
-    final totalChairs = shop.totalChairs;
-    final stations = stationsAsync.value ?? [];
-
-    final activeCount = stations
-        .where((s) => s.status == ChairStatus.occupied)
-        .length;
-
-    // First half of the chairs on the left wall, the rest on the right.
-    final leftStations = <Station>[];
-    final rightStations = <Station>[];
-    for (int i = 1; i <= totalChairs; i++) {
-      final station = stations.firstWhere(
-        (s) => s.chairNumber == i,
-        orElse: () => Station(chairNumber: i, shopId: shop.id),
-      );
-      if (i <= (totalChairs / 2).ceil()) {
-        leftStations.add(station);
-      } else {
-        rightStations.add(station);
-      }
-    }
-
     Widget body;
     if (!stationsAsync.hasValue && stationsAsync.isLoading) {
       body = const Center(child: CircularProgressIndicator());
@@ -57,94 +30,20 @@ class FloorPlanScreen extends ConsumerWidget {
         onRetry: () => ref.read(floorPlanProvider.notifier).loadStations(),
       );
     } else {
-      final rows = leftStations.length;
-      final couch = WaitingCouchWidget(
+      body = RoomView(
+        shopName: shop.name,
+        established: shop.createdAt.year,
+        stations: stationsAsync.value ?? const [],
+        totalChairs: shop.totalChairs,
         waitingCount: queueItems.length,
+        onStationTap: (s) => _handleStationTap(context, ref, s),
         onReserveTap: () =>
             showAppSheet<void>(context, (_) => const _AddWaitingSheet()),
         onQueueViewTap: () =>
             showAppSheet<void>(context, (_) => const _QueueListSheet()),
-      );
-      body = LayoutBuilder(
-        builder: (context, constraints) {
-          // Size the rows so the whole room, couch included, fits on one
-          // screen when possible; larger shops scroll.
-          const fixed = _ceilingHeight + _hudHeight + _couchAreaHeight;
-          final rowHeight = rows == 0
-              ? _maxRowHeight
-              : ((constraints.maxHeight - fixed) / rows).clamp(
-                  _minRowHeight,
-                  _maxRowHeight,
-                );
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(queueProvider);
-              await ref.read(floorPlanProvider.notifier).loadStations();
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: CustomPaint(
-                  painter: const RoomShellPainter(
-                    ceilingHeight: _ceilingHeight,
-                    wallWidth: _wallWidth,
-                  ),
-                  child: Column(
-                    children: [
-                      SizedBox(
-                        height: _ceilingHeight + _hudHeight,
-                        child: _RoomHeader(
-                          shopName: shop.name,
-                          established: shop.createdAt.year,
-                          active: activeCount,
-                          total: totalChairs,
-                          waiting: queueItems.length,
-                        ),
-                      ),
-                      for (var i = 0; i < rows; i++)
-                        SizedBox(
-                          height: rowHeight,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: StationWidget(
-                                  station: leftStations[i],
-                                  isLeftWall: true,
-                                  onTap: () => _handleStationTap(
-                                    context,
-                                    ref,
-                                    leftStations[i],
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: i < rightStations.length
-                                    ? StationWidget(
-                                        station: rightStations[i],
-                                        isLeftWall: false,
-                                        onTap: () => _handleStationTap(
-                                          context,
-                                          ref,
-                                          rightStations[i],
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 10, bottom: 14),
-                        child: couch,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          );
+        onRefresh: () async {
+          ref.invalidate(queueProvider);
+          await ref.read(floorPlanProvider.notifier).loadStations();
         },
       );
     }
@@ -154,13 +53,6 @@ class FloorPlanScreen extends ConsumerWidget {
       body: SafeArea(bottom: false, child: body),
     );
   }
-
-  static const double _ceilingHeight = 64;
-  static const double _wallWidth = 18;
-  static const double _hudHeight = 70;
-  static const double _couchAreaHeight = 196;
-  static const double _minRowHeight = 106;
-  static const double _maxRowHeight = 150;
 
   void _handleStationTap(BuildContext context, WidgetRef ref, Station station) {
     switch (station.status) {
@@ -332,79 +224,6 @@ class _QueueListSheet extends ConsumerWidget {
             );
           }),
       ],
-    );
-  }
-}
-
-/// Top of the room: the salon's marquee sign hanging from the ceiling, with
-/// live status printed on the back wall to either side of it.
-class _RoomHeader extends StatelessWidget {
-  const _RoomHeader({
-    required this.shopName,
-    required this.established,
-    required this.active,
-    required this.total,
-    required this.waiting,
-  });
-
-  final String shopName;
-  final int established;
-  final int active;
-  final int total;
-  final int waiting;
-
-  @override
-  Widget build(BuildContext context) {
-    const style = TextStyle(
-      fontSize: 9,
-      height: 1.3,
-      fontWeight: FontWeight.w700,
-      letterSpacing: 0.6,
-      color: Color(0xFF6B7280),
-    );
-    final occupancy = total > 0 ? (active / total * 100).round() : 0;
-    final today = DateFormat('EEE d MMM').format(DateTime.now()).toUpperCase();
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final signWidth = math.min(
-          constraints.maxWidth * 0.62,
-          (constraints.maxHeight - 4) * SalonSign.aspectRatio,
-        );
-        final sideWidth = (constraints.maxWidth - signWidth) / 2 - 26;
-
-        Widget side(String text, TextAlign align) => SizedBox(
-          width: math.max(0, sideWidth),
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: align == TextAlign.left
-                ? Alignment.bottomLeft
-                : Alignment.bottomRight,
-            child: Text(text, textAlign: align, style: style),
-          ),
-        );
-
-        return Stack(
-          children: [
-            Align(
-              alignment: const Alignment(0, -0.2),
-              child: SizedBox(
-                width: signWidth,
-                child: SalonSign(name: shopName, established: established),
-              ),
-            ),
-            Positioned(left: 26, bottom: 4, child: side(today, TextAlign.left)),
-            Positioned(
-              right: 26,
-              bottom: 4,
-              child: side(
-                '$active/$total ACTIVE\n$occupancy% · $waiting WAITING',
-                TextAlign.right,
-              ),
-            ),
-          ],
-        );
-      },
     );
   }
 }

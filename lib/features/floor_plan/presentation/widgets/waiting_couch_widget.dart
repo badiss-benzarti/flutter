@@ -9,11 +9,15 @@ class WaitingCouchWidget extends StatelessWidget {
     required this.waitingCount,
     required this.onReserveTap,
     required this.onQueueViewTap,
+    this.reserveLabel,
   });
 
   final int waitingCount;
   final VoidCallback onReserveTap;
   final VoidCallback onQueueViewTap;
+
+  /// Text of the action bar; defaults to "RESERVE WAITING SPOT".
+  final String? reserveLabel;
 
   static const _radius = Radius.circular(22);
 
@@ -68,14 +72,14 @@ class WaitingCouchWidget extends StatelessWidget {
             child: InkWell(
               onTap: onReserveTap,
               borderRadius: const BorderRadius.vertical(bottom: _radius),
-              child: const Padding(
-                padding: EdgeInsets.fromLTRB(16, 10, 12, 12),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
                 child: Row(
                   children: [
                     Expanded(
                       child: Text(
-                        'RESERVE WAITING SPOT',
-                        style: TextStyle(
+                        reserveLabel ?? 'RESERVE WAITING SPOT',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                           height: 1.15,
@@ -84,8 +88,8 @@ class WaitingCouchWidget extends StatelessWidget {
                         ),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Icon(
+                    const SizedBox(width: 8),
+                    const Icon(
                       Icons.add_circle_outline,
                       color: Colors.white,
                       size: 24,
