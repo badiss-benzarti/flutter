@@ -18,9 +18,7 @@ class SalonPage extends StatelessWidget {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: Colors.white,
           title: Column(
             children: [
               Text(

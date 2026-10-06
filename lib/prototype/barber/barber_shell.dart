@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../../core/ui/dashboard_widgets.dart';
+import '../../core/ui/room_navigation_bar.dart';
+import '../../features/finance/domain/service_ticket.dart';
+import '../../features/finance/presentation/screens/finance_screen.dart'
+    show paymentStyle;
+import '../../features/floor_plan/presentation/widgets/room/room_view.dart';
 import '../client/client_shell.dart';
 import '../client/salon_page.dart';
 import '../mock_data.dart';
 import '../widgets/ui.dart';
 
-/// Barber side of the app, signed in as Sami from Blade & Crown.
+/// Barber side of the app, signed in as Sami from Blade & Crown. Same layout
+/// as the owner app, with the salon floor as the home tab.
 class BarberShell extends StatefulWidget {
   const BarberShell({super.key});
 
@@ -16,7 +23,9 @@ class BarberShell extends StatefulWidget {
 }
 
 class _BarberShellState extends State<BarberShell> {
-  int _tab = 0;
+  static const _salonIndex = 2;
+
+  int _tab = _salonIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -28,34 +37,172 @@ class _BarberShellState extends State<BarberShell> {
             child: IndexedStack(
               index: _tab,
               children: const [
-                _TodayScreen(),
+                _ProfileScreen(),
                 _EarningsScreen(),
+                _SalonFloorScreen(),
+                _TodayScreen(),
                 _PortfolioScreen(),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFF3E7C0),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
-            label: 'Today',
+      bottomNavigationBar: RoomNavigationBar(
+        items: const [
+          RoomNavItem(Icons.person_outline, Icons.person, 'Profile'),
+          RoomNavItem(
+            Icons.account_balance_wallet_outlined,
+            Icons.account_balance_wallet,
+            'Earnings',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
-            label: 'Earnings',
+          RoomNavItem(Icons.chair_outlined, Icons.chair_outlined, 'Salon'),
+          RoomNavItem(Icons.today_outlined, Icons.today, 'Agenda'),
+          RoomNavItem(
+            Icons.photo_camera_outlined,
+            Icons.photo_camera,
+            'Portfolio',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.photo_camera_outlined),
-            selectedIcon: Icon(Icons.photo_camera),
-            label: 'Portfolio',
+        ],
+        currentIndex: _tab,
+        onTap: (i) => setState(() => _tab = i),
+      ),
+    );
+  }
+}
+
+MockSalon get _mySalon => salons.firstWhere((s) => s.id == 'blade');
+
+// -----------------------------------------------------------------------------
+// Salon: the live floor, as on the owner's home tab
+// -----------------------------------------------------------------------------
+
+class _SalonFloorScreen extends StatelessWidget {
+  const _SalonFloorScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final salon = _mySalon;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: RoomView(
+          shopName: salon.name,
+          established: 2026,
+          stations: salon.stations,
+          totalChairs: salon.chairs,
+          waitingCount: salon.waiting,
+          // Barbers don't assign chairs: free ones read "Free chair".
+          anonymizeClients: true,
+          reserveLabel: 'ADD A WALK-IN',
+          onReserveTap: () =>
+              showDone(context, 'Walk-in added to the waiting list.'),
+          onQueueViewTap: () =>
+              showDone(context, '${salon.waiting} clients are waiting.'),
+          onStationTap: (s) {
+            final barber = s.activeBarberName;
+            showDone(
+              context,
+              barber == BarberShell.me
+                  ? 'Your chair #${s.chairNumber}.'
+                  : barber == null
+                  ? 'Chair #${s.chairNumber} is free.'
+                  : 'Chair #${s.chairNumber} · $barber.',
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Profile, laid out like the owner's Settings
+// -----------------------------------------------------------------------------
+
+class _ProfileScreen extends StatefulWidget {
+  const _ProfileScreen();
+
+  @override
+  State<_ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<_ProfileScreen> {
+  bool _newRequests = true;
+  bool _vipOffers = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('My Profile')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Card(
+            child: ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Avatar(BarberShell.me, radius: 26),
+              title: Text(
+                BarberShell.me,
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+              ),
+              subtitle: Text('Skin fades · ★ 4.9 · 214 reviews'),
+              trailing: Icon(Icons.edit_outlined),
+            ),
+          ),
+          const SectionTitle('My salon'),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.storefront_outlined),
+                  title: Text(
+                    _mySalon.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Chair #1 · Commission 60%'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => SalonPage(salon: _mySalon),
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                const ListTile(
+                  leading: Icon(Icons.schedule),
+                  title: Text('Working hours'),
+                  trailing: Text('Tue–Sun · 9:00–20:00'),
+                ),
+              ],
+            ),
+          ),
+          const SectionTitle('Notifications'),
+          Card(
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('New booking requests'),
+                  value: _newRequests,
+                  onChanged: (v) => setState(() => _newRequests = v),
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('VIP offers'),
+                  subtitle: const Text('They expire after 5 minutes'),
+                  value: _vipOffers,
+                  onChanged: (v) => setState(() => _vipOffers = v),
+                ),
+              ],
+            ),
+          ),
+          const SectionTitle('Account'),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Switch role (prototype)'),
+              onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+            ),
           ),
         ],
       ),
@@ -64,7 +211,7 @@ class _BarberShellState extends State<BarberShell> {
 }
 
 // -----------------------------------------------------------------------------
-// Today
+// Agenda: duty, requests and next clients
 // -----------------------------------------------------------------------------
 
 class _TodayScreen extends StatefulWidget {
@@ -91,9 +238,7 @@ class _TodayScreenState extends State<_TodayScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
       appBar: AppBar(
-        backgroundColor: Colors.white,
         title: const Column(
           children: [
             Text('Hi Sami', style: TextStyle(fontWeight: FontWeight.w900)),
@@ -234,7 +379,7 @@ class _Kpi extends StatelessWidget {
 }
 
 // -----------------------------------------------------------------------------
-// Earnings
+// Earnings, built from the same blocks as the owner's Finance screen
 // -----------------------------------------------------------------------------
 
 class _EarningsScreen extends StatefulWidget {
@@ -255,176 +400,156 @@ class _EarningsScreenState extends State<_EarningsScreen> {
     (2480.0, 395.0, 310.0, 151),
   ];
   static const _week = [62.0, 88.0, 74.0, 120.0, 156.0, 182.0, 128.0];
+  // (client, service, my share, VIP extra, payment, minutes ago)
+  static const _ledger = [
+    ('Omar B.', 'Haircut + Beard', 21.0, 0.0, PaymentMethod.cash, 25),
+    ('Aziz G.', 'Haircut · VIP', 15.0, 15.0, PaymentMethod.card, 70),
+    ('Mehdi T.', 'Haircut', 15.0, 0.0, PaymentMethod.cash, 115),
+    ('Rami H.', 'Beard Trim', 9.0, 0.0, PaymentMethod.transfer, 160),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final (commission, tips, vip, clients) = _figures[_period];
     final total = commission + tips + vip;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('My earnings'),
-        backgroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      appBar: AppBar(title: const Text('My Earnings')),
+      body: Column(
         children: [
-          SegmentedButton<int>(
-            segments: [
-              for (var i = 0; i < 3; i++)
-                ButtonSegment(value: i, label: Text(_periods[i])),
-            ],
-            selected: {_period},
-            onSelectionChanged: (v) => setState(() => _period = v.first),
+          PeriodChips<int>(
+            options: [for (var i = 0; i < 3; i++) (_periods[i], i)],
+            selected: _period,
+            onSelected: (i) => setState(() => _period = i),
           ),
-          const SizedBox(height: 14),
-          InkCard(
-            color: ink,
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
               children: [
-                Text(
-                  '${_periods[_period].toUpperCase()} · YOU EARNED',
-                  style: const TextStyle(
-                    color: Color(0xFF9CA3AF),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
+                MoneyHeroCard(
+                  label: '${_periods[_period]} · you earned',
+                  amount: dt(total),
+                  stats: [
+                    HeroStat('Commission', dt(commission), MoneyHeroCard.blue),
+                    HeroStat('Tips', dt(tips), MoneyHeroCard.green),
+                    HeroStat('VIP extras', dt(vip), MoneyHeroCard.gold),
+                    HeroStat('Clients Served', '$clients'),
+                  ],
+                ),
+                const SectionHeading('Breakdown'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AmountCard(
+                        title: 'Commission',
+                        amount: dt(commission),
+                        icon: Icons.content_cut,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AmountCard(
+                        title: 'Tips',
+                        amount: dt(tips),
+                        icon: Icons.volunteer_activism_outlined,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: AmountCard(
+                        title: 'VIP extras',
+                        amount: dt(vip),
+                        icon: Icons.verified_outlined,
+                        accent: gold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SectionHeading('Last 7 days'),
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(8, 16, 8, 12),
+                    child: SizedBox(height: 150, child: _WeekChart(_week)),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  dt(total),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  '$clients clients',
-                  style: const TextStyle(color: Colors.white70),
-                ),
+                const SectionHeading('Service Ledger'),
+                for (final (client, service, share, extra, method, ago)
+                    in _ledger)
+                  _ledgerTile(client, service, share, extra, method, ago),
               ],
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _Part('Commission', commission, ink),
-              const SizedBox(width: 8),
-              _Part('Tips', tips, const Color(0xFF10B981)),
-              const SizedBox(width: 8),
-              _Part('VIP extras', vip, gold),
-            ],
-          ),
-          const SectionTitle('Last 7 days'),
-          InkCard(
-            child: SizedBox(
-              height: 150,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  for (var i = 0; i < _week.length; i++)
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            '${_week[i].toInt()}',
-                            style: const TextStyle(fontSize: 10, color: muted),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            height: 100 * _week[i] / 182,
-                            margin: const EdgeInsets.symmetric(horizontal: 6),
-                            decoration: BoxDecoration(
-                              color: i == _week.length - 1 ? gold : ink,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SectionTitle('Recent'),
-          for (final (client, service, amount, vipExtra) in const [
-            ('Omar B.', 'Haircut + Beard', 21.0, 0.0),
-            ('Aziz G.', 'Haircut · VIP', 15.0, 15.0),
-            ('Mehdi T.', 'Haircut', 15.0, 0.0),
-            ('Rami H.', 'Beard Trim', 9.0, 0.0),
-          ])
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Avatar(client, radius: 18),
-              title: Text(
-                client,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              subtitle: Text(service),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    dt(amount + vipExtra),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                  if (vipExtra > 0)
-                    Text(
-                      '+${dt(vipExtra)} VIP',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: gold,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                ],
-              ),
-            ),
         ],
       ),
     );
   }
+
+  Widget _ledgerTile(
+    String client,
+    String service,
+    double share,
+    double extra,
+    PaymentMethod method,
+    int minutesAgo,
+  ) {
+    final (bg, fg, icon) = paymentStyle(method);
+    final time = TimeOfDay.fromDateTime(
+      DateTime.now().subtract(Duration(minutes: minutesAgo)),
+    ).format(context);
+    return LedgerTile(
+      icon: icon,
+      iconBackground: bg,
+      iconColor: fg,
+      title: client,
+      subtitle: '$service • Chair #1 • $time',
+      amount: dt(share + extra),
+      note: extra > 0 ? '+${dt(extra)} VIP' : 'My share',
+      noteColor: extra > 0 ? gold : const Color(0xFF10B981),
+    );
+  }
 }
 
-class _Part extends StatelessWidget {
-  const _Part(this.label, this.amount, this.color);
+class _WeekChart extends StatelessWidget {
+  const _WeekChart(this.values);
 
-  final String label;
-  final double amount;
-  final Color color;
+  final List<double> values;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: InkCard(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(width: 18, height: 4, color: color),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(fontSize: 11, color: muted)),
-            Text(
-              dt(amount),
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+    final peak = values.reduce((a, b) => a > b ? a : b);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        for (var i = 0; i < values.length; i++)
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  '${values[i].toInt()}',
+                  style: const TextStyle(fontSize: 10, color: muted),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 100 * values[i] / peak,
+                  margin: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: i == values.length - 1 ? gold : Colors.black,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 }
@@ -454,11 +579,7 @@ class _PortfolioScreenState extends State<_PortfolioScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('My portfolio'),
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('My portfolio')),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: ink,
         foregroundColor: Colors.white,

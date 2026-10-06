@@ -1,3 +1,4 @@
+import 'package:barber_shop_owner/core/ui/dashboard_widgets.dart';
 import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
 import 'package:barber_shop_owner/features/finance/domain/finance_summary.dart';
 import 'package:barber_shop_owner/features/finance/domain/service_ticket.dart';
@@ -69,48 +70,31 @@ class _PeriodSelector extends ConsumerWidget {
                     '${dateFormat.format(range.end.subtract(const Duration(days: 1)))}'
         : 'Custom…';
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Row(
-        children: [
-          _chip('Today', FinancePeriod.today, notifier),
-          _chip('Last 7 days', FinancePeriod.last7Days, notifier),
-          _chip('Last 30 days', FinancePeriod.last30Days, notifier),
-          ChoiceChip(
-            avatar: const Icon(Icons.date_range, size: 16),
-            label: Text(customLabel),
-            selected: range.period == FinancePeriod.custom,
-            onSelected: (_) async {
-              final now = DateTime.now();
-              final picked = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(now.year - 5),
-                lastDate: now,
-                initialDateRange: DateTimeRange(
-                  start: range.start,
-                  end: range.end.subtract(const Duration(days: 1)),
-                ),
-              );
-              if (picked != null) notifier.selectCustom(picked);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _chip(
-    String label,
-    FinancePeriod period,
-    FinanceRangeNotifier notifier,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: range.period == period,
-        onSelected: (_) => notifier.select(period),
+    return PeriodChips<FinancePeriod>(
+      options: const [
+        ('Today', FinancePeriod.today),
+        ('Last 7 days', FinancePeriod.last7Days),
+        ('Last 30 days', FinancePeriod.last30Days),
+      ],
+      selected: range.period,
+      onSelected: notifier.select,
+      trailing: ChoiceChip(
+        avatar: const Icon(Icons.date_range, size: 16),
+        label: Text(customLabel),
+        selected: range.period == FinancePeriod.custom,
+        onSelected: (_) async {
+          final now = DateTime.now();
+          final picked = await showDateRangePicker(
+            context: context,
+            firstDate: DateTime(now.year - 5),
+            lastDate: now,
+            initialDateRange: DateTimeRange(
+              start: range.start,
+              end: range.end.subtract(const Duration(days: 1)),
+            ),
+          );
+          if (picked != null) notifier.selectCustom(picked);
+        },
       ),
     );
   }
@@ -125,115 +109,66 @@ class _FinanceBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final periodLabel = switch (range.period) {
-      FinancePeriod.today => "TODAY'S",
-      FinancePeriod.last7Days => 'LAST 7 DAYS',
-      FinancePeriod.last30Days => 'LAST 30 DAYS',
-      FinancePeriod.custom => 'PERIOD',
+      FinancePeriod.today => "Today's",
+      FinancePeriod.last7Days => 'Last 7 days',
+      FinancePeriod.last30Days => 'Last 30 days',
+      FinancePeriod.custom => 'Period',
     };
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.black,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$periodLabel SERVICE REVENUE',
-                style: const TextStyle(
-                  color: Color(0xFF9CA3AF),
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                formatMoney(summary.grossRevenue),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 20,
-                runSpacing: 10,
-                children: [
-                  _stat(
-                    'Shop Net Profit',
-                    formatMoney(summary.shopNetRevenue),
-                    const Color(0xFF10B981),
-                  ),
-                  _stat(
-                    'Barber Commissions',
-                    formatMoney(summary.barberPayouts),
-                    const Color(0xFF60A5FA),
-                  ),
-                  _stat('Tips', formatMoney(summary.tipsTotal), Colors.white),
-                  _stat(
-                    'Clients Served',
-                    '${summary.totalClientsServed}',
-                    Colors.white,
-                  ),
-                  _stat(
-                    'Avg. Ticket',
-                    formatMoney(summary.averageTicket),
-                    Colors.white,
-                  ),
-                ],
-              ),
-            ],
-          ),
+        MoneyHeroCard(
+          label: '$periodLabel service revenue',
+          amount: formatMoney(summary.grossRevenue),
+          stats: [
+            HeroStat(
+              'Shop Net Profit',
+              formatMoney(summary.shopNetRevenue),
+              MoneyHeroCard.green,
+            ),
+            HeroStat(
+              'Barber Commissions',
+              formatMoney(summary.barberPayouts),
+              MoneyHeroCard.blue,
+            ),
+            HeroStat('Tips', formatMoney(summary.tipsTotal)),
+            HeroStat('Clients Served', '${summary.totalClientsServed}'),
+            HeroStat('Avg. Ticket', formatMoney(summary.averageTicket)),
+          ],
         ),
-        const SizedBox(height: 16),
-        const Text(
-          'Collected (incl. tips)',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
+        const SectionHeading('Collected (incl. tips)'),
         Row(
           children: [
             Expanded(
-              child: _registerCard(
-                'Cash',
-                formatMoney(summary.cashTotal),
-                Icons.payments_outlined,
+              child: AmountCard(
+                title: 'Cash',
+                amount: formatMoney(summary.cashTotal),
+                icon: Icons.payments_outlined,
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _registerCard(
-                'Card',
-                formatMoney(summary.cardTotal),
-                Icons.credit_card,
+              child: AmountCard(
+                title: 'Card',
+                amount: formatMoney(summary.cardTotal),
+                icon: Icons.credit_card,
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: _registerCard(
-                'Transfer',
-                formatMoney(summary.transferTotal),
-                Icons.account_balance_outlined,
+              child: AmountCard(
+                title: 'Transfer',
+                amount: formatMoney(summary.transferTotal),
+                icon: Icons.account_balance_outlined,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        const Text(
-          'Barber Payouts',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
+        const SectionHeading('Barber Payouts'),
         if (summary.payoutsByBarber.isEmpty)
-          _emptyBox('No payouts for this period.')
+          const EmptyBox('No payouts for this period.')
         else
           Card(
             child: Column(
@@ -260,86 +195,15 @@ class _FinanceBody extends StatelessWidget {
               }).toList(),
             ),
           ),
-        const SizedBox(height: 24),
-        const Text(
-          'Service Ledger',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 10),
+        const SectionHeading('Service Ledger'),
         if (summary.tickets.isEmpty)
-          _emptyBox(
+          const EmptyBox(
             'No completed services in this period.\n'
             'Check out clients on the floor plan to record income.',
           )
         else
           ...summary.tickets.map((t) => _TicketTile(ticket: t, range: range)),
       ],
-    );
-  }
-
-  Widget _stat(String label, String value, Color valueColor) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 10),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _registerCard(String title, String amount, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              amount,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _emptyBox(String message) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Center(
-        child: Text(
-          message,
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.grey),
-        ),
-      ),
     );
   }
 }
@@ -354,56 +218,38 @@ class _TicketTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final time = DateFormat(range.isSingleDay ? 'h:mm a' : 'd MMM, h:mm a')
         .format(ticket.timestamp);
-    final (bg, fg, icon) = switch (ticket.paymentMethod) {
-      PaymentMethod.cash => (
-        const Color(0xFFDCFCE7),
-        const Color(0xFF166534),
-        Icons.attach_money,
-      ),
-      PaymentMethod.card => (
-        const Color(0xFFDBEAFE),
-        const Color(0xFF1E40AF),
-        Icons.credit_card,
-      ),
-      PaymentMethod.transfer => (
-        const Color(0xFFF3E8FF),
-        const Color(0xFF6B21A8),
-        Icons.account_balance_outlined,
-      ),
-    };
+    final (bg, fg, icon) = paymentStyle(ticket.paymentMethod);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: bg,
-          child: Icon(icon, color: fg),
-        ),
-        title: Text(
-          ticket.clientName,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
+    return LedgerTile(
+      icon: icon,
+      iconBackground: bg,
+      iconColor: fg,
+      title: ticket.clientName,
+      subtitle:
           '${ticket.serviceNames.join(", ")} • Chair #${ticket.chairNumber} • $time',
-          style: const TextStyle(fontSize: 12),
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(
-              formatMoney(ticket.totalPrice + ticket.tip),
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-            ),
-            Text(
-              ticket.tip > 0
-                  ? 'Tip ${formatMoney(ticket.tip)}'
-                  : 'Shop ${formatMoney(ticket.shopCut)}',
-              style: const TextStyle(fontSize: 10, color: Color(0xFF10B981)),
-            ),
-          ],
-        ),
-      ),
+      amount: formatMoney(ticket.totalPrice + ticket.tip),
+      note: ticket.tip > 0
+          ? 'Tip ${formatMoney(ticket.tip)}'
+          : 'Shop ${formatMoney(ticket.shopCut)}',
     );
   }
 }
+
+/// Badge colors and icon of a payment method in ledgers.
+(Color, Color, IconData) paymentStyle(PaymentMethod method) => switch (method) {
+  PaymentMethod.cash => (
+    const Color(0xFFDCFCE7),
+    const Color(0xFF166534),
+    Icons.attach_money,
+  ),
+  PaymentMethod.card => (
+    const Color(0xFFDBEAFE),
+    const Color(0xFF1E40AF),
+    Icons.credit_card,
+  ),
+  PaymentMethod.transfer => (
+    const Color(0xFFF3E8FF),
+    const Color(0xFF6B21A8),
+    Icons.account_balance_outlined,
+  ),
+};

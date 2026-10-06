@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/ui/room_navigation_bar.dart';
 import '../mock_data.dart';
 import '../widgets/ui.dart';
 import 'salon_map_screen.dart';
@@ -15,7 +16,9 @@ class ClientShell extends StatefulWidget {
 }
 
 class _ClientShellState extends State<ClientShell> {
-  int _tab = 0;
+  static const _mapIndex = 2;
+
+  int _tab = _mapIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -27,42 +30,31 @@ class _ClientShellState extends State<ClientShell> {
             child: IndexedStack(
               index: _tab,
               children: const [
-                SalonMapScreen(),
-                _BookingsScreen(),
-                _SocialScreen(),
                 _ProfileScreen(),
+                _BookingsScreen(),
+                SalonMapScreen(),
+                _SocialScreen(),
+                _FavoritesScreen(),
               ],
             ),
           ),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _tab,
-        onDestinationSelected: (i) => setState(() => _tab = i),
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFF3E7C0),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.map_outlined),
-            selectedIcon: Icon(Icons.map),
-            label: 'Map',
+      // Same bar as the owner app, with the map as the home button.
+      bottomNavigationBar: RoomNavigationBar(
+        items: const [
+          RoomNavItem(Icons.person_outline, Icons.person, 'Profile'),
+          RoomNavItem(Icons.event_note_outlined, Icons.event_note, 'Bookings'),
+          RoomNavItem(Icons.map_outlined, Icons.map, 'Map'),
+          RoomNavItem(
+            Icons.photo_library_outlined,
+            Icons.photo_library,
+            'Social',
           ),
-          NavigationDestination(
-            icon: Icon(Icons.event_note_outlined),
-            selectedIcon: Icon(Icons.event_note),
-            label: 'Bookings',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.photo_library_outlined),
-            selectedIcon: Icon(Icons.photo_library),
-            label: 'Social',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          RoomNavItem(Icons.favorite_border, Icons.favorite, 'Favorites'),
         ],
+        currentIndex: _tab,
+        onTap: (i) => setState(() => _tab = i),
       ),
     );
   }
@@ -78,11 +70,7 @@ class _BookingsScreen extends StatelessWidget {
       builder: (context, all, _) {
         final mine = all.where((b) => b.client == 'You').toList();
         return Scaffold(
-          backgroundColor: const Color(0xFFF9FAFB),
-          appBar: AppBar(
-            title: const Text('My bookings'),
-            backgroundColor: Colors.white,
-          ),
+          appBar: AppBar(title: const Text('My bookings')),
           body: mine.isEmpty
               ? const Center(
                   child: Padding(
@@ -207,11 +195,7 @@ class _SocialScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text('Fresh cuts in Tunis'),
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('Fresh cuts in Tunis')),
       body: GridView.builder(
         padding: const EdgeInsets.all(12),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -249,61 +233,151 @@ class _SocialScreen extends StatelessWidget {
   }
 }
 
-class _ProfileScreen extends StatelessWidget {
+/// Laid out like the owner's Settings: identity, then grouped cards.
+class _ProfileScreen extends StatefulWidget {
   const _ProfileScreen();
+
+  @override
+  State<_ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<_ProfileScreen> {
+  bool _turnAlerts = true;
+  bool _offers = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        title: const Text('Profile'),
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('My Profile')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const InkCard(
-            child: Row(
+          const Card(
+            child: ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              leading: Avatar('Y', radius: 26),
+              title: Text(
+                'Yassine J.',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 17),
+              ),
+              subtitle: Text('Client since 2026 · +216 20 123 456'),
+              trailing: Icon(Icons.edit_outlined),
+            ),
+          ),
+          const SectionTitle('Notifications'),
+          Card(
+            child: Column(
               children: [
-                Avatar('Y', radius: 28),
-                SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Yassine J.',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text('Client since 2026', style: TextStyle(color: muted)),
-                    ],
-                  ),
+                SwitchListTile(
+                  title: const Text('My turn is coming'),
+                  subtitle: const Text('When 2 clients are left before you'),
+                  value: _turnAlerts,
+                  onChanged: (v) => setState(() => _turnAlerts = v),
+                ),
+                const Divider(height: 1),
+                SwitchListTile(
+                  title: const Text('Offers from my salons'),
+                  value: _offers,
+                  onChanged: (v) => setState(() => _offers = v),
                 ),
               ],
             ),
           ),
-          const SectionTitle('Favorite barbers'),
-          Wrap(
-            spacing: 10,
-            children: [
-              for (final name in ['Sami', 'Walid', 'Malek'])
-                Chip(avatar: Avatar(name, radius: 10), label: Text(name)),
-            ],
-          ),
           const SectionTitle('Reliability'),
-          const InkCard(
-            child: Text(
-              '0 missed appointments. After 2 no-shows, booking is paused for 7 days.',
+          const Card(
+            child: ListTile(
+              leading: Icon(Icons.verified_outlined, color: Color(0xFF10B981)),
+              title: Text(
+                '0 missed appointments',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text('After 2 no-shows, booking is paused for 7 days.'),
             ),
           ),
-          const SizedBox(height: 20),
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
-            child: const Text('Switch role (prototype)'),
+          const SectionTitle('Account'),
+          Card(
+            child: Column(
+              children: [
+                const ListTile(
+                  leading: Icon(Icons.language),
+                  title: Text('Language'),
+                  trailing: Text('Français'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.swap_horiz),
+                  title: const Text('Switch role (prototype)'),
+                  onTap: () => Navigator.of(context).popUntil((r) => r.isFirst),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Salons and barbers the client follows.
+class _FavoritesScreen extends StatelessWidget {
+  const _FavoritesScreen();
+
+  static const _salonIds = ['blade', 'lac'];
+  static const _barbers = [
+    ('Sami', 'blade'),
+    ('Walid', 'lac'),
+    ('Malek', 'ennasr'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    void openSalon(MockSalon salon) => Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => SalonPage(salon: salon)));
+    MockSalon salonById(String id) => salons.firstWhere((s) => s.id == id);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Favorites')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const SectionTitle('Salons'),
+          for (final id in _salonIds)
+            Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                onTap: () => openSalon(salonById(id)),
+                leading: const CircleAvatar(
+                  backgroundColor: ink,
+                  child: Icon(Icons.storefront_outlined, color: Colors.white),
+                ),
+                title: Text(
+                  salonById(id).name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(children: [StatusPill(salonById(id))]),
+                ),
+                trailing: Stars(salonById(id).rating),
+              ),
+            ),
+          const SectionTitle('Barbers'),
+          Card(
+            child: Column(
+              children: [
+                for (final (name, salonId) in _barbers)
+                  ListTile(
+                    onTap: () => openSalon(salonById(salonId)),
+                    leading: Avatar(name),
+                    title: Text(
+                      name,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(salonById(salonId).name),
+                    trailing: const Icon(Icons.chevron_right),
+                  ),
+              ],
+            ),
           ),
         ],
       ),

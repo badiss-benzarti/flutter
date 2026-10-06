@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_theme.dart';
 import '../mock_data.dart';
 
 /// Visual language of the prototype: white cards with black outlines,
@@ -37,11 +38,12 @@ class InkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Same card as the owner app (AppTheme.cardTheme).
     return Material(
       color: color ?? Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: const BorderSide(color: ink, width: 1.5),
+        side: const BorderSide(color: AppTheme.surfaceBorder, width: 1.5),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -64,17 +66,13 @@ class SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 18, 2, 8),
+      padding: const EdgeInsets.fromLTRB(2, 20, 2, 10),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              text.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
-              ),
+              text,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
           ?trailing,
@@ -197,14 +195,11 @@ class PrototypeBanner extends StatelessWidget {
   }
 }
 
+/// Full-width main action, styled by the shared theme like the owner app.
 Widget primaryButton(String label, VoidCallback? onPressed, {IconData? icon}) {
-  return FilledButton.icon(
-    style: FilledButton.styleFrom(
-      backgroundColor: ink,
-      foregroundColor: Colors.white,
+  return ElevatedButton.icon(
+    style: ElevatedButton.styleFrom(
       minimumSize: const Size(double.infinity, 50),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
     ),
     onPressed: onPressed,
     icon: Icon(icon ?? Icons.check_rounded),
