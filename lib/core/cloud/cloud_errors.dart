@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/app_exception.dart';
@@ -29,6 +30,9 @@ AppException cloudException(Object error) {
     });
   }
   if (error is PostgrestException) {
+    if (error.code != 'P0001') {
+      debugPrint('Server refused: ${error.code} ${error.message}');
+    }
     return AppException(switch (error.code) {
       // Raised by our own triggers with a message written for users.
       'P0001' => error.message,
@@ -37,6 +41,7 @@ AppException cloudException(Object error) {
       _ => 'The server refused the change. Please try again.',
     });
   }
+  debugPrint('Unexpected cloud error: $error');
   return const AppException('Something went wrong. Please try again.');
 }
 

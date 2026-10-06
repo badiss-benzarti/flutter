@@ -22,7 +22,11 @@ const _enabled = bool.fromEnvironment('LIVE_SUPABASE');
 SupabaseClient _client() => SupabaseClient(
   SupabaseConfig.url,
   SupabaseConfig.publishableKey,
-  authOptions: const AuthClientOptions(autoRefreshToken: false),
+  // No storage in tests, so no PKCE (the app gets storage from initialize).
+  authOptions: const AuthClientOptions(
+    autoRefreshToken: false,
+    authFlowType: AuthFlowType.implicit,
+  ),
 );
 
 void main() {
