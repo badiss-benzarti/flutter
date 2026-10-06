@@ -1,18 +1,21 @@
+import 'package:barber_shop_owner/core/sync/sync_controller.dart';
 import 'package:barber_shop_owner/features/barbers/presentation/screens/barbers_screen.dart';
 import 'package:barber_shop_owner/features/clients/presentation/screens/clients_screen.dart';
 import 'package:barber_shop_owner/features/finance/presentation/screens/finance_screen.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/screens/floor_plan_screen.dart';
 import 'package:barber_shop_owner/features/settings/presentation/screens/settings_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   static const _floorIndex = 2;
 
   int _currentIndex = _floorIndex;
@@ -27,6 +30,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Keeps cloud sync running while the salon is open.
+    ref.watch(syncControllerProvider.select((s) => s.enabled));
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: _RoomNavigationBar(

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:barber_shop_owner/core/database/database_service.dart';
 import 'package:barber_shop_owner/core/repositories/barber_repository.dart';
 import 'package:barber_shop_owner/core/repositories/finance_repository.dart';
@@ -10,9 +12,9 @@ import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.d
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-/// All repositories wired to one fresh in-memory database.
+/// All repositories wired to one fresh database: one simulated device.
 class TestEnv {
-  TestEnv._(this.db, this.session)
+  TestEnv._(this.db, this.session, this._dir)
     : shops = ShopRepository(
         dbService: db,
         passwordHasher: const PasswordHasher(iterations: 1000),
@@ -25,11 +27,14 @@ class TestEnv {
 
   static Future<TestEnv> create() async {
     sqfliteFfiInit();
+    // A file per device: sqflite shares one connection between databases
+    // opened with the same path, so in-memory databases would be shared.
+    final dir = Directory.systemTemp.createTempSync('barber_test_');
     final db = DatabaseService(
       factory: databaseFactoryFfiNoIsolate,
-      path: inMemoryDatabasePath,
+      path: '${dir.path}/test.db',
     );
-    return TestEnv._(db, InMemorySessionStorage());
+    return TestEnv._(db, InMemorySessionStorage(), dir);
   }
 
   final DatabaseService db;
@@ -39,8 +44,12 @@ class TestEnv {
   final FloorPlanRepository floor;
   final FinanceRepository finance;
   final QueueRepository queue;
+  final Directory _dir;
 
-  Future<void> dispose() => db.close();
+  Future<void> dispose() async {
+    await db.close();
+    _dir.deleteSync(recursive: true);
+  }
 
   /// Registers an owner and creates a 4-chair shop with one barber at
   /// chair 1 (60% commission) and two services.

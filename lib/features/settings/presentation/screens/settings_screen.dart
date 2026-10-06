@@ -1,4 +1,5 @@
 import 'package:barber_shop_owner/core/repositories/shop_repository.dart';
+import 'package:barber_shop_owner/core/sync/sync_controller.dart';
 import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
@@ -34,6 +35,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const _SyncCard(),
+          const SizedBox(height: 16),
           _ShopProfileCard(shop: shop),
           const SizedBox(height: 16),
           _ServicesCard(services: shop.services),
@@ -547,6 +550,85 @@ class _DataStorageCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Whether the salon is saved online, and what is still waiting to be sent.
+class _SyncCard extends ConsumerWidget {
+  const _SyncCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sync = ref.watch(syncControllerProvider);
+    final (icon, color, title, detail) = _describe(context, sync);
+
+    return Card(
+      child: ListTile(
+        leading: sync.syncing
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
+            : Icon(icon, color: color),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        subtitle: Text(detail),
+        trailing: sync.enabled
+            ? IconButton(
+                tooltip: 'Sync now',
+                icon: const Icon(Icons.sync),
+                onPressed: sync.syncing
+                    ? null
+                    : () => ref.read(syncControllerProvider.notifier).syncNow(),
+              )
+            : null,
+      ),
+    );
+  }
+
+  static (IconData, Color, String, String) _describe(
+    BuildContext context,
+    SyncStatus sync,
+  ) {
+    if (!sync.enabled) {
+      return (
+        Icons.phone_android,
+        Colors.grey,
+        'Saved on this device only',
+        'Demo and older salons are not saved online.',
+      );
+    }
+    final waiting = sync.pending == 1 ? '1 change' : '${sync.pending} changes';
+    if (sync.offline) {
+      return (
+        Icons.cloud_off_outlined,
+        Colors.orange,
+        'Offline',
+        sync.pending == 0
+            ? 'Everything was saved online before going offline.'
+            : '$waiting will be sent when you are back online.',
+      );
+    }
+    if (sync.error != null) {
+      return (Icons.sync_problem, Colors.red, 'Not fully synced', sync.error!);
+    }
+    if (sync.pending > 0) {
+      return (
+        Icons.cloud_upload_outlined,
+        Colors.blueGrey,
+        'Sending',
+        '$waiting waiting.',
+      );
+    }
+    final last = sync.lastSyncedAt;
+    return (
+      Icons.cloud_done_outlined,
+      Colors.green,
+      'Saved online',
+      last == null
+          ? 'Up to date.'
+          : 'Last sync at ${TimeOfDay.fromDateTime(last).format(context)}.',
     );
   }
 }

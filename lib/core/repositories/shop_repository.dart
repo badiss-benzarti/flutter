@@ -5,6 +5,7 @@ import '../database/database_service.dart';
 import '../errors/app_exception.dart';
 import '../security/password_hasher.dart';
 import '../security/session_storage.dart';
+import '../sync/sync_schema.dart';
 import '../../features/auth_onboarding/domain/owner_account.dart';
 import '../../features/auth_onboarding/domain/shop_profile.dart';
 import '../../features/auth_onboarding/domain/shop_snapshot.dart';
@@ -248,32 +249,39 @@ class ShopRepository {
   Future<ShopProfile> importSnapshot(ShopSnapshot snapshot) async {
     final shop = snapshot.shop;
     final db = await _dbService.database;
-    await db.transaction((txn) async {
-      await txn.insert('shops', shop.toMap());
-      for (int i = 1; i <= shop.totalChairs; i++) {
-        await txn.insert('chairs', {
-          'chair_number': i,
-          'shop_id': shop.id,
-          'status': 'empty',
-        });
-      }
-      for (final barber in snapshot.barbers) {
-        await txn.insert('barbers', barber.copyWith(shopId: shop.id).toMap());
-        final chair = barber.assignedChair;
-        if (chair != null && !barber.isArchived) {
-          await txn.update(
-            'chairs',
-            {'status': 'available', 'active_barber_id': barber.id},
-            where: 'shop_id = ? AND chair_number = ?',
-            whereArgs: [shop.id, chair],
-          );
-        }
-      }
-      for (final service in shop.services) {
-        await txn.insert('services', {...service.toMap(), 'shop_id': shop.id});
-      }
-    });
+    // Came from the server: not queued to be sent back.
+    await db.transaction(
+      (txn) =>
+          SyncSchema.applyingRemote(txn, () => _insertSnapshot(txn, snapshot)),
+    );
     return (await getShopProfileByOwnerId(shop.ownerId))!;
+  }
+
+  Future<void> _insertSnapshot(Transaction txn, ShopSnapshot snapshot) async {
+    final shop = snapshot.shop;
+    await txn.insert('shops', shop.toMap());
+    for (int i = 1; i <= shop.totalChairs; i++) {
+      await txn.insert('chairs', {
+        'chair_number': i,
+        'shop_id': shop.id,
+        'status': 'empty',
+      });
+    }
+    for (final barber in snapshot.barbers) {
+      await txn.insert('barbers', barber.copyWith(shopId: shop.id).toMap());
+      final chair = barber.assignedChair;
+      if (chair != null && !barber.isArchived) {
+        await txn.update(
+          'chairs',
+          {'status': 'available', 'active_barber_id': barber.id},
+          where: 'shop_id = ? AND chair_number = ?',
+          whereArgs: [shop.id, chair],
+        );
+      }
+    }
+    for (final service in shop.services) {
+      await txn.insert('services', {...service.toMap(), 'shop_id': shop.id});
+    }
   }
 
   /// Removes a salon and everything in it from this device.

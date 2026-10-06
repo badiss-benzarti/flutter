@@ -10,6 +10,7 @@ library;
 import 'package:barber_shop_owner/core/cloud/cloud_auth.dart';
 import 'package:barber_shop_owner/core/cloud/cloud_shop_repository.dart';
 import 'package:barber_shop_owner/core/config/supabase_config.dart';
+import 'package:barber_shop_owner/core/sync/supabase_sync_remote.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_snapshot.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
@@ -106,6 +107,77 @@ void main() {
           hasLength(1),
         );
 
+        // Sync: device rows go up and come back identical.
+        final sync = SupabaseSyncRemote(owner);
+        final startedAt = DateTime.now().toIso8601String();
+        final queueId = uuid.v4();
+        final ticketId = uuid.v4();
+        await sync.push('barbers', shopId, barberId, {
+          'id': barberId,
+          'shop_id': shopId,
+          'name': 'Sami B.',
+          'phone': '20000002',
+          'commission_rate': 0.5,
+          'is_on_duty': 1,
+          'assigned_chair': 2,
+          'created_at': startedAt,
+          'is_archived': 0,
+        });
+        await sync.push('chairs', shopId, '2', {
+          'shop_id': shopId,
+          'chair_number': 2,
+          'status': 'occupied',
+          'active_barber_id': barberId,
+          'active_client_name': 'Chedi',
+          'active_ticket_id': uuid.v4(),
+          'service_start_time': startedAt,
+        });
+        await sync.push('queue', shopId, queueId, {
+          'id': queueId,
+          'shop_id': shopId,
+          'client_name': 'Walk-in',
+          'client_phone': null,
+          'requested_barber_id': barberId,
+          'notes': null,
+          'status': 'waiting',
+          'created_at': startedAt,
+        });
+        final ticket = <String, Object?>{
+          'id': ticketId,
+          'shop_id': shopId,
+          'client_name': 'Aziz',
+          'client_phone': null,
+          'barber_id': barberId,
+          'chair_number': 2,
+          'service_names': 'Haircut',
+          'total_price': 25.5,
+          'barber_cut': 12.75,
+          'shop_cut': 12.75,
+          'tip': 2.0,
+          'payment_method': 'cash',
+          'timestamp': startedAt,
+          'is_completed': 1,
+        };
+        await sync.push('tickets', shopId, ticketId, ticket);
+        await sync.push('tickets', shopId, ticketId, ticket); // idempotent
+
+        final barbers = await sync.pull('barbers', shopId, null);
+        expect(barbers.rows.single['phone'], '20000002');
+        expect(barbers.rows.single['commission_rate'], 0.5);
+        final seats = await sync.pull('chairs', shopId, null);
+        final seat = seats.rows.firstWhere((r) => r['chair_number'] == 2);
+        expect(seat['active_client_name'], 'Chedi');
+        expect(seat['service_start_time'], startedAt);
+        final tickets = await sync.pull('tickets', shopId, null);
+        expect(tickets.rows.single, ticket);
+        final queue = await sync.pull('queue', shopId, null);
+        expect(queue.rows.single['client_name'], 'Walk-in');
+        expect(queue.cursor, isNotNull);
+
+        await sync.push('queue', shopId, queueId, null);
+        final afterDelete = await sync.pull('queue', shopId, queue.cursor);
+        expect(afterDelete.deletedKeys, contains(queueId));
+
         // Not listed yet, and private data never leaves the salon.
         expect(await visitor.from('shops').select().eq('id', shopId), isEmpty);
         expect(
@@ -113,6 +185,10 @@ void main() {
               .from('barber_private')
               .select()
               .eq('barber_id', barberId),
+          isEmpty,
+        );
+        expect(
+          await visitor.from('chair_clients').select().eq('shop_id', shopId),
           isEmpty,
         );
       } finally {

@@ -418,7 +418,13 @@ void main() {
               'is_on_duty INTEGER NOT NULL DEFAULT 1, assigned_chair INTEGER, '
               'created_at TEXT NOT NULL)',
             );
-            for (final t in ['tickets', 'queue', 'shops']) {
+            for (final t in [
+              'tickets',
+              'queue',
+              'shops',
+              'services',
+              'chairs',
+            ]) {
               await db.execute(
                 'CREATE TABLE $t (id TEXT PRIMARY KEY, shop_id TEXT, owner_id TEXT, '
                 'timestamp TEXT, status TEXT, created_at TEXT)',

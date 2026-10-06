@@ -4,6 +4,8 @@ import 'package:barber_shop_owner/core/errors/app_exception.dart';
 import 'package:barber_shop_owner/core/providers/cloud_providers.dart';
 import 'package:barber_shop_owner/core/providers/core_providers.dart';
 import 'package:barber_shop_owner/core/security/password_hasher.dart';
+import 'package:barber_shop_owner/core/sync/sync_controller.dart';
+import 'package:barber_shop_owner/core/sync/sync_remote.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_snapshot.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
@@ -83,6 +85,26 @@ class FakeCloudShops implements CloudShopRepository {
   }
 }
 
+/// Sync is covered by sync_engine_test; here the server is never reached.
+class _Unreachable implements SyncRemote {
+  const _Unreachable();
+
+  @override
+  Future<void> push(
+    String entity,
+    String shopId,
+    String key,
+    Map<String, Object?>? row,
+  ) async => throw const SyncOffline();
+
+  @override
+  Future<RemoteChanges> pull(
+    String entity,
+    String shopId,
+    DateTime? since,
+  ) async => throw const SyncOffline();
+}
+
 /// One phone: its own database, sharing the fake server with other phones.
 class Device {
   Device._(this.env, this.container);
@@ -129,6 +151,7 @@ class Device {
       sessionStorageProvider.overrideWithValue(env.session),
       cloudAuthProvider.overrideWithValue(auth),
       cloudShopRepositoryProvider.overrideWithValue(shops),
+      syncRemoteProvider.overrideWithValue(const _Unreachable()),
     ],
   );
 }
@@ -322,5 +345,10 @@ void main() {
     expect(owner.isCloudAccount, isTrue);
     expect(phone.state.shop?.id, legacy.shopId);
     expect(cloudShops.byOwner[owner.id]?.shop.id, legacy.shopId);
+    // Its history follows through sync.
+    final backlog = await phone.container
+        .read(syncEngineProvider)
+        .backlog(legacy.shopId);
+    expect(backlog.pending, greaterThan(0));
   });
 }

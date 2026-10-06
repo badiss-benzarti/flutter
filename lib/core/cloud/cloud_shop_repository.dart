@@ -74,6 +74,7 @@ class SupabaseCloudShopRepository implements CloudShopRepository {
         'address': shop.address,
         'phone': shop.phone,
         'total_chairs': shop.totalChairs,
+        'created_at': shop.createdAt.toUtc().toIso8601String(),
       });
     } catch (e) {
       throw cloudException(e);
@@ -90,6 +91,7 @@ class SupabaseCloudShopRepository implements CloudShopRepository {
               'is_on_duty': b.isOnDuty,
               'assigned_chair': b.assignedChair,
               'is_archived': b.isArchived,
+              'created_at': b.createdAt.toUtc().toIso8601String(),
             },
         ]);
         await _client.from('barber_private').insert([

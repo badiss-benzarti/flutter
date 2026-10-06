@@ -1,5 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../sync/sync_schema.dart';
+
 import 'database_platform_io.dart'
     if (dart.library.js_interop) 'database_platform_web.dart';
 
@@ -17,7 +19,7 @@ class DatabaseService {
   Future<Database>? _opening;
 
   static const String _dbFileName = 'barber_shop_owner_secure.db';
-  static const int schemaVersion = 2;
+  static const int schemaVersion = 3;
 
   /// The open database. Concurrent callers share the same connection.
   Future<Database> get database {
@@ -161,6 +163,9 @@ class DatabaseService {
     if (oldVersion < 2 && newVersion >= 2) {
       await _migrateToV2(db);
     }
+    if (oldVersion < 3 && newVersion >= 3) {
+      await _migrateToV3(db);
+    }
   }
 
   /// v2: barbers are archived instead of deleted (deleting would cascade to
@@ -182,6 +187,13 @@ class DatabaseService {
     batch.execute(
       'CREATE INDEX IF NOT EXISTS idx_shops_owner ON shops (owner_id);',
     );
+    await batch.commit(noResult: true);
+  }
+
+  /// v3: change capture for cloud sync (see [SyncSchema]).
+  Future<void> _migrateToV3(Database db) async {
+    final batch = db.batch();
+    SyncSchema.createStatements().forEach(batch.execute);
     await batch.commit(noResult: true);
   }
 

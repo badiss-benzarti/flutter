@@ -9,6 +9,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/repositories/floor_plan_repository.dart';
 import '../../../core/repositories/queue_repository.dart';
 import '../../../core/repositories/shop_repository.dart';
+import '../../../core/sync/sync_controller.dart';
 import '../domain/owner_account.dart';
 import '../domain/shop_profile.dart';
 import '../../barbers/domain/barber.dart';
@@ -207,7 +208,11 @@ class AuthNotifier extends Notifier<AuthState> {
 
     ShopProfile? shop;
     if (local != null) {
-      if (remote == null) await _cloudShops.uploadShop(local);
+      if (remote == null) {
+        await _cloudShops.uploadShop(local);
+        // Its history (tickets, queue...) follows through sync.
+        await ref.read(syncEngineProvider).enqueueAll(local.shop.id);
+      }
       shop = local.shop;
     } else if (remote != null) {
       shop = await _repository.importSnapshot(remote);

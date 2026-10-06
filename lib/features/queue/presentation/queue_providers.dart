@@ -4,6 +4,7 @@ import '../../../core/providers/core_providers.dart';
 import '../../../core/repositories/queue_repository.dart';
 import '../../auth_onboarding/presentation/auth_providers.dart';
 import '../domain/queue_item.dart';
+import '../../../core/sync/sync_revision.dart';
 
 final queueRepositoryProvider = Provider<QueueRepository>((ref) {
   return QueueRepository(dbService: ref.watch(databaseServiceProvider));
@@ -12,6 +13,7 @@ final queueRepositoryProvider = Provider<QueueRepository>((ref) {
 class QueueNotifier extends AsyncNotifier<List<QueueItem>> {
   @override
   Future<List<QueueItem>> build() async {
+    ref.watch(syncRevisionProvider);
     final shopId = ref.watch(currentShopIdProvider);
     if (shopId == null) return const [];
     return ref.read(queueRepositoryProvider).getWaitingQueue(shopId);

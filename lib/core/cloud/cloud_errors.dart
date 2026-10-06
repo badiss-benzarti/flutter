@@ -11,7 +11,7 @@ const _offlineMessage =
 /// Converts a Supabase / network failure into a message the user can act on.
 AppException cloudException(Object error) {
   if (error is AppException) return error;
-  if (error is AuthRetryableFetchException || _isNetworkError(error)) {
+  if (isNetworkError(error)) {
     return const AppException(_offlineMessage);
   }
   if (error is AuthException) {
@@ -45,7 +45,9 @@ AppException cloudException(Object error) {
   return const AppException('Something went wrong. Please try again.');
 }
 
-bool _isNetworkError(Object error) {
+/// Whether [error] means the server could not be reached.
+bool isNetworkError(Object error) {
+  if (error is AuthRetryableFetchException) return true;
   if (error is TimeoutException) return true;
   final text = error.toString();
   return text.contains('SocketException') ||

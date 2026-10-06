@@ -9,6 +9,7 @@ import '../../finance/domain/service_ticket.dart';
 import '../../finance/presentation/finance_providers.dart';
 import '../../queue/presentation/queue_providers.dart';
 import '../domain/station.dart';
+import '../../../core/sync/sync_revision.dart';
 
 final floorPlanRepositoryProvider = Provider<FloorPlanRepository>((ref) {
   return FloorPlanRepository(dbService: ref.watch(databaseServiceProvider));
@@ -17,6 +18,7 @@ final floorPlanRepositoryProvider = Provider<FloorPlanRepository>((ref) {
 class FloorPlanNotifier extends AsyncNotifier<List<Station>> {
   @override
   Future<List<Station>> build() async {
+    ref.watch(syncRevisionProvider);
     final shopId = ref.watch(currentShopIdProvider);
     if (shopId == null) return const [];
     return ref.read(floorPlanRepositoryProvider).getStations(shopId);
