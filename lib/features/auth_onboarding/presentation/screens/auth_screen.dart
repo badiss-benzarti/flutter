@@ -101,6 +101,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ),
 
+                  if (authState.infoMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD1FAE5),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF34D399)),
+                      ),
+                      child: Text(
+                        authState.infoMessage!,
+                        style: const TextStyle(
+                          color: Color(0xFF065F46),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+
                   if (_isRegistering) ...[
                     TextFormField(
                       controller: _nameCtrl,
@@ -257,6 +275,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             password: _passwordCtrl.text,
             fullName: _nameCtrl.text.trim(),
           );
+      // Email confirmation pending: come back to sign in afterwards.
+      if (mounted && ref.read(authProvider).infoMessage != null) {
+        _passwordCtrl.clear();
+        setState(() => _isRegistering = false);
+      }
     } else {
       await ref
           .read(authProvider.notifier)

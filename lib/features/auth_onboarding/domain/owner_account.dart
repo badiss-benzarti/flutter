@@ -15,6 +15,9 @@ class OwnerAccount {
   final String fullName;
   final DateTime createdAt;
 
+  /// Verified by the server; the device stores no password for it.
+  bool get isCloudAccount => passwordHash.isEmpty;
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

@@ -7,6 +7,7 @@ import '../security/password_hasher.dart';
 import '../security/session_storage.dart';
 import '../../features/auth_onboarding/domain/owner_account.dart';
 import '../../features/auth_onboarding/domain/shop_profile.dart';
+import '../../features/auth_onboarding/domain/shop_snapshot.dart';
 import '../../features/barbers/domain/barber.dart';
 
 class ShopRepository {
@@ -88,6 +89,10 @@ class ShopRepository {
     }
 
     var owner = OwnerAccount.fromMap(results.first);
+    // Cloud accounts have no password on the device.
+    if (owner.isCloudAccount) {
+      throw const AppException('Invalid email or password.');
+    }
     final valid = await _passwordHasher.verify(
       password,
       owner.salt,
@@ -137,6 +142,145 @@ class ShopRepository {
   }
 
   Future<void> logout() => _sessionStorage.clear();
+
+  // ---------------------------------------------------------------------------
+  // Cloud accounts
+  //
+  // Cloud accounts are verified by the server; this device keeps a password-
+  // less copy of the owner so their salon can be used offline. Accounts with
+  // a password hash here are device-only (created before cloud accounts, and
+  // the demo shop).
+  // ---------------------------------------------------------------------------
+
+  /// Whether [email] belongs to a device-only account.
+  Future<bool> hasDeviceOnlyAccount(String email) async {
+    final db = await _dbService.database;
+    final rows = await db.query(
+      'owners',
+      columns: ['password_hash'],
+      where: 'email = ?',
+      whereArgs: [normalizeEmail(email)],
+    );
+    return rows.isNotEmpty &&
+        (rows.first['password_hash'] as String).isNotEmpty;
+  }
+
+  /// Signs in the cloud account [id] on this device. A device-only account
+  /// with the same email becomes this cloud account and keeps its salon.
+  Future<OwnerAccount> signInCloudOwner({
+    required String id,
+    required String email,
+    required String fullName,
+  }) async {
+    final normalizedEmail = normalizeEmail(email);
+    final name = fullName.trim().isNotEmpty
+        ? fullName.trim()
+        : normalizedEmail.split('@').first;
+    final db = await _dbService.database;
+
+    await db.transaction((txn) async {
+      final known = await txn.query(
+        'owners',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      if (known.isNotEmpty) return;
+
+      final sameEmail = await txn.query(
+        'owners',
+        columns: ['id'],
+        where: 'email = ?',
+        whereArgs: [normalizedEmail],
+      );
+      if (sameEmail.isEmpty) {
+        await txn.insert('owners', {
+          'id': id,
+          'email': normalizedEmail,
+          'password_hash': '',
+          'salt': '',
+          'full_name': name,
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        return;
+      }
+
+      // Re-key the device-only account; checked at commit.
+      final oldId = sameEmail.first['id'] as String;
+      await txn.execute('PRAGMA defer_foreign_keys = ON');
+      await txn.update(
+        'shops',
+        {'owner_id': id},
+        where: 'owner_id = ?',
+        whereArgs: [oldId],
+      );
+      await txn.update(
+        'owners',
+        {'id': id, 'password_hash': '', 'salt': ''},
+        where: 'id = ?',
+        whereArgs: [oldId],
+      );
+    });
+
+    await _sessionStorage.writeActiveOwnerId(id);
+    final rows = await db.query('owners', where: 'id = ?', whereArgs: [id]);
+    return OwnerAccount.fromMap(rows.first);
+  }
+
+  /// The salon's setup as stored on this device.
+  Future<ShopSnapshot?> loadSnapshot(String ownerId) async {
+    final shop = await getShopProfileByOwnerId(ownerId);
+    if (shop == null) return null;
+    final db = await _dbService.database;
+    final barbers = await db.query(
+      'barbers',
+      where: 'shop_id = ?',
+      whereArgs: [shop.id],
+      orderBy: 'created_at ASC',
+    );
+    return ShopSnapshot(
+      shop: shop,
+      barbers: barbers.map(Barber.fromMap).toList(),
+    );
+  }
+
+  /// Stores a salon downloaded from the cloud on this device.
+  Future<ShopProfile> importSnapshot(ShopSnapshot snapshot) async {
+    final shop = snapshot.shop;
+    final db = await _dbService.database;
+    await db.transaction((txn) async {
+      await txn.insert('shops', shop.toMap());
+      for (int i = 1; i <= shop.totalChairs; i++) {
+        await txn.insert('chairs', {
+          'chair_number': i,
+          'shop_id': shop.id,
+          'status': 'empty',
+        });
+      }
+      for (final barber in snapshot.barbers) {
+        await txn.insert('barbers', barber.copyWith(shopId: shop.id).toMap());
+        final chair = barber.assignedChair;
+        if (chair != null && !barber.isArchived) {
+          await txn.update(
+            'chairs',
+            {'status': 'available', 'active_barber_id': barber.id},
+            where: 'shop_id = ? AND chair_number = ?',
+            whereArgs: [shop.id, chair],
+          );
+        }
+      }
+      for (final service in shop.services) {
+        await txn.insert('services', {...service.toMap(), 'shop_id': shop.id});
+      }
+    });
+    return (await getShopProfileByOwnerId(shop.ownerId))!;
+  }
+
+  /// Removes a salon and everything in it from this device.
+  Future<void> deleteShopLocally(String shopId) async {
+    final db = await _dbService.database;
+    await db.delete('shops', where: 'id = ?', whereArgs: [shopId]);
+  }
 
   /// Creates the shop with its chairs, initial barbers and services.
   Future<ShopProfile> setupShopProfile({
