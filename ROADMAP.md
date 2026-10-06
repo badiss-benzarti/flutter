@@ -32,7 +32,8 @@ city Tunis.
 
 ## Phase 3: Client side
 - [ ] 3.1 Client sign-up / login
-- [ ] 3.2 Map of salons with live status (open, busy, estimated wait)
+- [ ] 3.2 Map of salons with live status (open, busy, estimated wait): one small cached request per visible area, refreshed every minute while shown; no realtime on the map
+- [ ] 3.2b Map tiles: move off the public OpenStreetMap servers before the beta (free tier provider or self-hosted Tunisia tiles)
 - [ ] 3.3 Salon page: live room with anonymous clients, barbers, prices, photos
 - [ ] 3.4 Join the queue remotely
 - [ ] 3.5 Book an appointment (day, time, barber); barber accepts / declines
