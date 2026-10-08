@@ -16,6 +16,7 @@ import 'package:barber_shop_owner/core/sync/supabase_sync_remote.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_snapshot.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
+import 'package:barber_shop_owner/features/barber_app/barber_salon.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -207,6 +208,27 @@ void main() {
         expect(link.commissionRate, 0.5);
         await expectLater(
           links.join(sami.id, invite.code),
+          throwsA(isA<AppException>()),
+        );
+
+        // His salon live (migration 0005): the floor, a walk-in, and duty
+        // refused while his chair is serving a client.
+        final salonRepo = SupabaseBarberSalonRepository(barberClient);
+        await salonRepo.addWalkIn(shopId, 'Live walk-in');
+        final salonFloor = await salonRepo.load(shopId);
+        expect(salonFloor.stations, hasLength(3));
+        expect(
+          salonFloor.stations
+              .firstWhere((s) => s.chairNumber == 2)
+              .activeBarberName,
+          'Sami B.',
+        );
+        expect(
+          salonFloor.queue.map((q) => q.clientName),
+          contains('Live walk-in'),
+        );
+        await expectLater(
+          salonRepo.setMyDuty(onDuty: false),
           throwsA(isA<AppException>()),
         );
 

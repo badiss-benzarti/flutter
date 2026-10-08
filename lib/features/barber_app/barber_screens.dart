@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../prototype/barber/barber_shell.dart';
 import '../../core/ui/ui_helpers.dart';
 import 'barber_session.dart';
+import 'barber_space.dart';
 
 /// What a signed-in barber sees: the code screen until they join a salon,
 /// then their space.
@@ -14,7 +15,7 @@ class BarberGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(barberSessionProvider);
-    if (session.link != null) return const BarberHomeScreen();
+    if (session.link != null) return const BarberSpace();
     if (session.isLoading && session.errorMessage == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: Colors.black)),
@@ -158,10 +159,10 @@ class _JoinSalonScreenState extends ConsumerState<JoinSalonScreen> {
   }
 }
 
-/// The barber's space once linked to a salon. Agenda, earnings and
-/// portfolio arrive with roadmap steps 2.2 to 2.4.
-class BarberHomeScreen extends ConsumerWidget {
-  const BarberHomeScreen({super.key});
+/// The barber's profile tab: who they are in the salon, name requests,
+/// leaving the salon and signing out.
+class BarberProfileTab extends ConsumerWidget {
+  const BarberProfileTab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -171,7 +172,7 @@ class BarberHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Salon'),
+        title: const Text('My Profile'),
         actions: [
           IconButton(
             tooltip: 'Sign out',
@@ -297,11 +298,6 @@ class BarberHomeScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  const ListTile(
-                    leading: Icon(Icons.today_outlined),
-                    title: Text('Agenda'),
-                    subtitle: Text('Your next clients and the queue'),
-                  ),
                   const ListTile(
                     leading: Icon(Icons.account_balance_wallet_outlined),
                     title: Text('My earnings'),
