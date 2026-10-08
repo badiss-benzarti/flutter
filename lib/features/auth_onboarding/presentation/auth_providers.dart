@@ -126,10 +126,11 @@ class AuthNotifier extends Notifier<AuthState> {
     state = state.copyWith(isLoading: true, clearError: true);
     final normalizedEmail = ShopRepository.normalizeEmail(email);
     try {
-      final user = await _cloudAuth.signUpOwner(
+      final user = await _cloudAuth.signUp(
         email: normalizedEmail,
         password: password,
         fullName: fullName.trim(),
+        role: AccountRole.owner,
       );
       if (user == null) {
         state = AuthState(
@@ -162,6 +163,12 @@ class AuthNotifier extends Notifier<AuthState> {
         if (!await _repository.hasDeviceOnlyAccount(email)) rethrow;
         await _signInDeviceOnly(email, password);
         return true;
+      }
+      if (user.role != AccountRole.owner) {
+        await _cloudAuth.signOut();
+        throw const AppException(
+          'This is not a salon owner account. Go back and choose your space.',
+        );
       }
       await _signInCloudUser(user);
       return true;

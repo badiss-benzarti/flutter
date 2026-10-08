@@ -45,7 +45,8 @@ class SupabaseCloudShopRepository implements CloudShopRepository {
       final barberRows = await _client
           .from('barbers')
           .select(
-            'id, shop_id, name, is_on_duty, assigned_chair, is_archived, '
+            'id, shop_id, profile_id, name, is_on_duty, assigned_chair, '
+            'is_archived, '
             'created_at, barber_private(phone, commission_rate)',
           )
           .eq('shop_id', shopId)
@@ -157,6 +158,7 @@ class SupabaseCloudShopRepository implements CloudShopRepository {
       assignedChair: row['assigned_chair'] as int?,
       createdAt: DateTime.parse(row['created_at'] as String),
       isArchived: row['is_archived'] as bool,
+      profileId: row['profile_id'] as String?,
     );
   }
 }

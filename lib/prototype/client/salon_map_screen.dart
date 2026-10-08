@@ -255,7 +255,8 @@ class _NearbyStrip extends StatelessWidget {
         return a.waitMinutes.compareTo(b.waitMinutes);
       });
     return SizedBox(
-      height: 96,
+      // Room for name, area and status at larger text sizes.
+      height: 108,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: sorted.length,

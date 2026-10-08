@@ -59,7 +59,8 @@ void main() {
       try {
         user = await auth.signIn(email: _email, password: _password);
       } on AppException {
-        final created = await auth.signUpOwner(
+        final created = await auth.signUp(
+          role: AccountRole.owner,
           email: _email,
           password: _password,
           fullName: 'BarberFlow Demo',

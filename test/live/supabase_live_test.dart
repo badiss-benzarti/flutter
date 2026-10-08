@@ -8,11 +8,14 @@
 library;
 
 import 'package:barber_shop_owner/core/cloud/cloud_auth.dart';
+import 'package:barber_shop_owner/core/cloud/cloud_invites.dart';
 import 'package:barber_shop_owner/core/cloud/cloud_shop_repository.dart';
 import 'package:barber_shop_owner/core/config/supabase_config.dart';
+import 'package:barber_shop_owner/core/errors/app_exception.dart';
 import 'package:barber_shop_owner/core/sync/supabase_sync_remote.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_snapshot.dart';
+import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -41,7 +44,8 @@ void main() {
       const uuid = Uuid();
 
       final stamp = DateTime.now().millisecondsSinceEpoch;
-      final user = await auth.signUpOwner(
+      final user = await auth.signUp(
+        role: AccountRole.owner,
         email: 'live-check-$stamp@barberflow-test.com',
         password: 'Live-check-$stamp',
         fullName: 'Live Check',
@@ -177,6 +181,30 @@ void main() {
         await sync.push('queue', shopId, queueId, null);
         final afterDelete = await sync.pull('queue', shopId, queue.cursor);
         expect(afterDelete.deletedKeys, contains(queueId));
+
+        // Invitations (migration 0003): the owner invites Sami, who signs up
+        // with a barber account and joins with the code.
+        final invite = await SupabaseCloudInvites(owner)
+            .createBarberInvite(barberId);
+        expect(invite.code, matches(RegExp(r'^[A-HJ-NP-Z2-9]{8}$')));
+        final barberClient = _client();
+        final barberAuth = SupabaseCloudAuth(barberClient);
+        final sami = await barberAuth.signUp(
+          email: 'live-check-$stamp-barber@barberflow-test.com',
+          password: 'Live-check-$stamp',
+          fullName: 'Sami',
+          role: AccountRole.barber,
+        );
+        final links = SupabaseBarberLinkRepository(barberClient);
+        final link = await links.join(sami!.id, invite.code.toLowerCase());
+        expect(link.barberId, barberId);
+        expect(link.shopName, 'Live Check Salon');
+        expect(link.commissionRate, 0.5);
+        await expectLater(
+          links.join(sami.id, invite.code),
+          throwsA(isA<AppException>()),
+        );
+        await barberAuth.signOut();
 
         // Not listed yet, and private data never leaves the salon.
         expect(await visitor.from('shops').select().eq('id', shopId), isEmpty);

@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../prototype/barber/barber_shell.dart';
 import '../../prototype/client/client_shell.dart';
 import '../floor_plan/presentation/widgets/room/salon_sign.dart';
 import 'entry_role.dart';
 
 /// First screen of the app when nobody is signed in: "Who are you?".
 ///
-/// Owners continue to sign-in. The barber and client sides open as previews
-/// on sample data until they are connected to the server (roadmap phases 2
-/// and 3).
+/// Owners and barbers continue to sign-in. The client side opens as a
+/// preview on sample data until it is connected to the server (roadmap
+/// phase 3).
 class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
@@ -58,9 +57,10 @@ class WelcomeScreen extends ConsumerWidget {
                 _RoleCard(
                   icon: Icons.content_cut,
                   title: 'Barber',
-                  subtitle: 'Your agenda, your earnings, your portfolio',
-                  preview: true,
-                  onTap: () => preview(const BarberShell()),
+                  subtitle: 'Join your salon with the code from its owner',
+                  onTap: () => ref
+                      .read(entryRoleProvider.notifier)
+                      .choose(EntryRole.barber),
                 ),
                 const SizedBox(height: 12),
                 _RoleCard(

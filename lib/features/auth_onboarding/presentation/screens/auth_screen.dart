@@ -1,12 +1,19 @@
 import 'package:barber_shop_owner/core/demo/demo_seeder.dart';
 import 'package:barber_shop_owner/core/repositories/shop_repository.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
+import 'package:barber_shop_owner/features/barber_app/barber_session.dart';
 import 'package:barber_shop_owner/features/welcome/entry_role.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../prototype/barber/barber_shell.dart';
+
+/// Sign-in and sign-up for salon owners, or with [forBarber] for barbers
+/// (who then join their salon with the owner's code).
 class AuthScreen extends ConsumerStatefulWidget {
-  const AuthScreen({super.key});
+  const AuthScreen({super.key, this.forBarber = false});
+
+  final bool forBarber;
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
@@ -32,7 +39,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
+    final barber = widget.forBarber;
+    final (isLoading, errorMessage, infoMessage) = barber
+        ? _barberStatus(ref.watch(barberSessionProvider))
+        : _ownerStatus(ref.watch(authProvider));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -77,9 +87,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   const SizedBox(height: 20),
 
                   Text(
-                    _isRegistering
-                        ? 'Create Owner Account'
-                        : 'Barber Shop Owner Portal',
+                    switch ((barber, _isRegistering)) {
+                      (false, true) => 'Create Owner Account',
+                      (false, false) => 'Barber Shop Owner Portal',
+                      (true, true) => 'Create your barber account',
+                      (true, false) => 'Barber sign in',
+                    },
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
@@ -88,9 +101,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _isRegistering
-                        ? 'Set up your master account to manage your shop'
-                        : 'Sign in to access your floor plan and financial ledger',
+                    switch ((barber, _isRegistering)) {
+                      (false, true) =>
+                        'Set up your master account to manage your shop',
+                      (false, false) => 'Sign in to access your floor plan and financial ledger',
+                      (true, true) =>
+                        'Then enter the code your salon owner gave you',
+                      (true, false) =>
+                        'Your agenda, your earnings, your portfolio',
+                    },
                     style: const TextStyle(
                       color: Color(0xFF6B7280),
                       fontSize: 13,
@@ -98,7 +117,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  if (authState.errorMessage != null)
+                  if (errorMessage != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(12),
@@ -108,7 +127,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         border: Border.all(color: const Color(0xFFF87171)),
                       ),
                       child: Text(
-                        authState.errorMessage!,
+                        errorMessage,
                         style: const TextStyle(
                           color: Color(0xFFB91C1C),
                           fontSize: 13,
@@ -116,7 +135,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ),
 
-                  if (authState.infoMessage != null)
+                  if (infoMessage != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 16),
                       padding: const EdgeInsets.all(12),
@@ -126,7 +145,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                         border: Border.all(color: const Color(0xFF34D399)),
                       ),
                       child: Text(
-                        authState.infoMessage!,
+                        infoMessage,
                         style: const TextStyle(
                           color: Color(0xFF065F46),
                           fontSize: 13,
@@ -196,8 +215,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   const SizedBox(height: 24),
 
                   ElevatedButton(
-                    onPressed: authState.isLoading ? null : _submit,
-                    child: authState.isLoading
+                    onPressed: isLoading ? null : _submit,
+                    child: isLoading
                         ? const SizedBox(
                             height: 20,
                             width: 20,
@@ -206,26 +225,38 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : Text(
-                            _isRegistering
-                                ? 'Register as Shop Owner'
-                                : 'Sign In to Shop',
-                          ),
+                        : Text(switch ((barber, _isRegistering)) {
+                            (false, true) => 'Register as Shop Owner',
+                            (false, false) => 'Sign In to Shop',
+                            (true, true) => 'Create barber account',
+                            (true, false) => 'Sign in',
+                          }),
                   ),
                   const SizedBox(height: 16),
 
                   TextButton(
                     onPressed: () {
-                      ref.read(authProvider.notifier).clearError();
+                      if (barber) {
+                        ref
+                            .read(barberSessionProvider.notifier)
+                            .clearMessages();
+                      } else {
+                        ref.read(authProvider.notifier).clearError();
+                      }
                       _formKey.currentState?.reset();
                       setState(() {
                         _isRegistering = !_isRegistering;
                       });
                     },
                     child: Text(
-                      _isRegistering
-                          ? 'Already have an owner account? Sign In'
-                          : 'New shop owner? Create an account',
+                      switch ((barber, _isRegistering)) {
+                        (false, true) =>
+                          'Already have an owner account? Sign In',
+                        (false, false) => 'New shop owner? Create an account',
+                        (true, true) =>
+                          'Already have a barber account? Sign in',
+                        (true, false) => 'New here? Create a barber account',
+                      },
                       style: const TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.w600,
@@ -233,7 +264,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                     ),
                   ),
-                  if (!_isRegistering) ...[
+                  if (barber && !_isRegistering)
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF6B7280),
+                      ),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => const BarberShell(),
+                        ),
+                      ),
+                      icon: const Icon(Icons.visibility_outlined, size: 18),
+                      label: const Text('See a preview of the barber space'),
+                    ),
+                  if (!barber && !_isRegistering) ...[
                     const SizedBox(height: 8),
                     const Row(
                       children: [
@@ -257,7 +301,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ),
                       icon: const Icon(Icons.storefront_outlined),
                       label: const Text('Explore the demo shop'),
-                      onPressed: authState.isLoading
+                      onPressed: isLoading
                           ? null
                           : () => ref.read(authProvider.notifier).loginDemo(),
                     ),
@@ -278,27 +322,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     );
   }
 
+  static (bool, String?, String?) _ownerStatus(AuthState s) =>
+      (s.isLoading, s.errorMessage, s.infoMessage);
+
+  static (bool, String?, String?) _barberStatus(BarberSessionState s) =>
+      (s.isLoading, s.errorMessage, s.infoMessage);
+
   Future<void> _submit() async {
-    if (ref.read(authProvider).isLoading) return;
+    final barber = widget.forBarber;
+    final busy = barber
+        ? ref.read(barberSessionProvider).isLoading
+        : ref.read(authProvider).isLoading;
+    if (busy) return;
     if (!_formKey.currentState!.validate()) return;
 
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
     if (_isRegistering) {
-      await ref
-          .read(authProvider.notifier)
-          .register(
-            email: _emailCtrl.text.trim(),
-            password: _passwordCtrl.text,
-            fullName: _nameCtrl.text.trim(),
-          );
+      final fullName = _nameCtrl.text.trim();
+      if (barber) {
+        await ref
+            .read(barberSessionProvider.notifier)
+            .register(email: email, password: password, fullName: fullName);
+      } else {
+        await ref
+            .read(authProvider.notifier)
+            .register(email: email, password: password, fullName: fullName);
+      }
       // Email confirmation pending: come back to sign in afterwards.
-      if (mounted && ref.read(authProvider).infoMessage != null) {
+      final info = barber
+          ? ref.read(barberSessionProvider).infoMessage
+          : ref.read(authProvider).infoMessage;
+      if (mounted && info != null) {
         _passwordCtrl.clear();
         setState(() => _isRegistering = false);
       }
+    } else if (barber) {
+      await ref
+          .read(barberSessionProvider.notifier)
+          .login(email: email, password: password);
     } else {
       await ref
           .read(authProvider.notifier)
-          .login(email: _emailCtrl.text.trim(), password: _passwordCtrl.text);
+          .login(email: email, password: password);
     }
   }
 }

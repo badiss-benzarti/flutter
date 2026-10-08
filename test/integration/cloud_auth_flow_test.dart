@@ -1,6 +1,5 @@
 import 'package:barber_shop_owner/core/cloud/cloud_auth.dart';
 import 'package:barber_shop_owner/core/cloud/cloud_shop_repository.dart';
-import 'package:barber_shop_owner/core/errors/app_exception.dart';
 import 'package:barber_shop_owner/core/providers/cloud_providers.dart';
 import 'package:barber_shop_owner/core/providers/core_providers.dart';
 import 'package:barber_shop_owner/core/security/password_hasher.dart';
@@ -13,58 +12,8 @@ import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/fake_cloud_auth.dart';
 import '../helpers/test_database.dart';
-
-const _offline = AppException('No internet connection.');
-
-/// In-memory stand-in for Supabase Auth.
-class FakeCloudAuth implements CloudAuth {
-  final _accounts = <String, (CloudUser, String)>{};
-  bool requireEmailConfirmation = false;
-  bool offline = false;
-  int calls = 0;
-
-  @override
-  CloudUser? currentUser;
-
-  @override
-  Future<CloudUser?> signUpOwner({
-    required String email,
-    required String password,
-    required String fullName,
-  }) async {
-    calls++;
-    if (offline) throw _offline;
-    if (_accounts.containsKey(email)) {
-      throw const AppException('An account with this email already exists.');
-    }
-    final user = CloudUser(
-      id: '00000000-0000-4000-8000-${_accounts.length.toString().padLeft(12, '0')}',
-      email: email,
-      fullName: fullName,
-    );
-    _accounts[email] = (user, password);
-    if (requireEmailConfirmation) return null;
-    return currentUser = user;
-  }
-
-  @override
-  Future<CloudUser> signIn({
-    required String email,
-    required String password,
-  }) async {
-    calls++;
-    if (offline) throw _offline;
-    final account = _accounts[email];
-    if (account == null || account.$2 != password) {
-      throw const AppException('Invalid email or password.');
-    }
-    return currentUser = account.$1;
-  }
-
-  @override
-  Future<void> signOut() async => currentUser = null;
-}
 
 /// In-memory stand-in for the salons stored on the server.
 class FakeCloudShops implements CloudShopRepository {
@@ -74,13 +23,13 @@ class FakeCloudShops implements CloudShopRepository {
 
   @override
   Future<ShopSnapshot?> fetchOwnedShop(String ownerId) async {
-    if (offline) throw _offline;
+    if (offline) throw offlineError;
     return byOwner[ownerId];
   }
 
   @override
   Future<void> uploadShop(ShopSnapshot snapshot) async {
-    if (offline || failUploads) throw _offline;
+    if (offline || failUploads) throw offlineError;
     byOwner[snapshot.shop.ownerId] = snapshot;
   }
 }
@@ -274,6 +223,24 @@ void main() {
     cloudAuth.currentUser = null;
     await phone.restart(cloudAuth, cloudShops);
     expect(phone.state.isAuthenticated, isFalse);
+  });
+
+  test('a barber account cannot open the owner app', () async {
+    await cloudAuth.signUp(
+      email: 'sami@test.tn',
+      password: 'password123',
+      fullName: 'Sami',
+      role: AccountRole.barber,
+    );
+    cloudAuth.currentUser = null;
+
+    expect(
+      await phone.auth.login(email: 'sami@test.tn', password: 'password123'),
+      isFalse,
+    );
+    expect(phone.state.isAuthenticated, isFalse);
+    expect(phone.state.errorMessage, contains('not a salon owner'));
+    expect(cloudAuth.currentUser, isNull);
   });
 
   test('email confirmation: nobody is signed in until confirmed', () async {

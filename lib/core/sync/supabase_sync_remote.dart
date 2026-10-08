@@ -233,7 +233,8 @@ class SupabaseSyncRemote implements SyncRemote {
         'barbers' => _changes(
           await _fetch(
             'barbers',
-            'id, shop_id, name, is_on_duty, assigned_chair, is_archived, '
+            'id, shop_id, profile_id, name, is_on_duty, assigned_chair, '
+                'is_archived, '
                 'created_at, updated_at, barber_private(phone, commission_rate)',
             'shop_id',
             shopId,
@@ -394,6 +395,7 @@ class SupabaseSyncRemote implements SyncRemote {
       'assigned_chair': r['assigned_chair'],
       'created_at': _localTime(r['created_at']),
       'is_archived': _int(r['is_archived']),
+      'profile_id': r['profile_id'],
     };
   }
 

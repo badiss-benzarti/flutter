@@ -5,6 +5,8 @@ import 'core/theme/app_theme.dart';
 import 'features/auth_onboarding/presentation/auth_providers.dart';
 import 'features/auth_onboarding/presentation/screens/auth_screen.dart';
 import 'features/auth_onboarding/presentation/screens/onboarding_wizard_screen.dart';
+import 'features/barber_app/barber_screens.dart';
+import 'features/barber_app/barber_session.dart';
 import 'features/dashboard/presentation/screens/main_navigation_screen.dart';
 import 'features/welcome/entry_role.dart';
 import 'features/welcome/welcome_screen.dart';
@@ -22,11 +24,18 @@ class BarberShopOwnerApp extends ConsumerWidget {
         body: Center(child: CircularProgressIndicator(color: Colors.black)),
       );
     } else if (!authState.isAuthenticated) {
-      // "Who are you?" first; owners then sign in.
-      final role = ref.watch(entryRoleProvider);
-      homeScreen = role == EntryRole.owner
-          ? const AuthScreen()
-          : const WelcomeScreen();
+      // A signed-in barber goes straight to their space; otherwise
+      // "Who are you?" first, then the chosen sign-in.
+      final barberSignedIn = ref.watch(
+        barberSessionProvider.select((s) => s.isSignedIn),
+      );
+      homeScreen = barberSignedIn
+          ? const BarberGate()
+          : switch (ref.watch(entryRoleProvider)) {
+              EntryRole.owner => const AuthScreen(),
+              EntryRole.barber => const AuthScreen(forBarber: true),
+              _ => const WelcomeScreen(),
+            };
     } else if (!authState.hasCompletedOnboarding) {
       homeScreen = const OnboardingWizardScreen();
     } else {

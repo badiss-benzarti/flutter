@@ -1,6 +1,7 @@
 import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
 import 'package:barber_shop_owner/features/barbers/presentation/barber_providers.dart';
+import 'package:barber_shop_owner/features/barbers/presentation/screens/barber_invite.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -149,6 +150,8 @@ class _BarberCard extends ConsumerWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                    const SizedBox(height: 4),
+                    BarberAppLink(barber: barber),
                   ],
                 ),
               ),
