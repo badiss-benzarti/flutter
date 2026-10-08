@@ -22,6 +22,7 @@ import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_salon.dart';
 import 'package:barber_shop_owner/features/barber_app/portfolio.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
+import 'package:barber_shop_owner/features/client_app/client_directory.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -368,6 +369,25 @@ void main() {
             .select('name, latitude, longitude, is_open')
             .eq('id', shopId);
         expect(listed.single['name'], 'Live Check Salon');
+
+        // The client app, without an account: the map finds the salon and
+        // its page shows barbers with their visit rating, never clients.
+        final directory = SupabaseClientDirectory(visitor);
+        final nearby = await directory.salonsIn(
+          south: 36.7,
+          west: 10.08,
+          north: 36.9,
+          east: 10.28,
+        );
+        expect(nearby.map((s) => s.id), contains(shopId));
+        final page = await directory.salon(shopId);
+        expect(page.salon.name, 'Live Check Salon');
+        expect(page.stations, hasLength(3));
+        expect(page.services.single.price, 25);
+        final renamed = page.barbers.single;
+        expect(renamed.name, 'Samy');
+        expect(renamed.ratingAvg, 4);
+        expect(renamed.ratingCount, 1);
         expect(
           await visitor.from('chairs').select().eq('shop_id', shopId),
           hasLength(3),

@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:barber_shop_owner/app.dart';
 import 'package:barber_shop_owner/core/providers/cloud_providers.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
-import 'package:flutter/material.dart';
+import 'package:barber_shop_owner/features/client_app/client_directory.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/fake_client_directory.dart';
 import '../helpers/fake_cloud_auth.dart';
 
 class _SignedOut extends AuthNotifier {
@@ -13,6 +17,15 @@ class _SignedOut extends AuthNotifier {
 }
 
 void main() {
+  // The map caches tiles in the app's cache folder.
+  setUpAll(() {
+    TestWidgetsFlutterBinding.ensureInitialized().defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          (_) async => Directory.systemTemp.path,
+        );
+  });
+
   testWidgets('the app opens on "Who are you?" and routes each role', (
     tester,
   ) async {
@@ -25,6 +38,7 @@ void main() {
         overrides: [
           authProvider.overrideWith(_SignedOut.new),
           cloudAuthProvider.overrideWithValue(FakeCloudAuth()),
+          clientDirectoryProvider.overrideWithValue(FakeClientDirectory()),
         ],
         child: const BarberShopOwnerApp(),
       ),
@@ -32,8 +46,8 @@ void main() {
     await tester.pump();
 
     expect(find.text('Who are you?'), findsOneWidget);
-    // Only the client side is still a preview.
-    expect(find.text('PREVIEW'), findsOneWidget);
+    // All three spaces are real now.
+    expect(find.text('PREVIEW'), findsNothing);
 
     // Owners go to their sign-in, and can come back.
     await tester.tap(find.text('Salon owner'));
@@ -53,15 +67,21 @@ void main() {
     await tester.tap(find.text('Who are you?'));
     await tester.pump();
 
-    // Clients open their preview space, and come back to the welcome.
+    // Clients go straight to the map of salons, no account needed, and
+    // can go back from their profile.
     await tester.tap(find.text('Client'));
-    // The salon sign animates forever: wait for the route instead.
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('PREVIEW · SAMPLE DATA'), findsOneWidget);
-    Navigator.of(tester.element(find.text('PREVIEW · SAMPLE DATA'))).pop();
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 600));
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.text('Map'), findsOneWidget);
+    expect(find.text('1 salon nearby'), findsOneWidget);
+    expect(find.text('Blade & Crown'), findsOneWidget);
+    await tester.tap(find.text('Profile'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Create your account'), findsOneWidget);
+    await tester.ensureVisible(find.text('Change space'));
+    await tester.tap(find.text('Change space'));
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Salon owner'), findsOneWidget);
   });
 }

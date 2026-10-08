@@ -31,10 +31,10 @@ city Tunis.
 - [x] 2.4 Portfolio as a social profile: photo + caption (compressed, client consent), comments, photo stars; barber rating from rated visits only
 
 ## Phase 3: Client side
-- [ ] 3.1 Client sign-up / login
-- [ ] 3.2 Map of salons with live status (open, busy, estimated wait): one small cached request per visible area, refreshed every minute while shown; no realtime on the map
+- [x] 3.1 Client sign-up / login (browsing works without an account)
+- [x] 3.2 Map of salons with live status (open, busy, estimated wait): one small cached request per visible area, refreshed every minute while shown; no realtime on the map
 - [ ] 3.2b Map tiles: move off the public OpenStreetMap servers before the beta (free tier provider or self-hosted Tunisia tiles)
-- [ ] 3.3 Salon page: live room with anonymous clients, barbers, prices, photos
+- [x] 3.3 Salon page: live room with anonymous clients, barbers (visit rating), prices, photos (comments shown; writing comes with 5.x)
 - [ ] 3.4 Join the queue remotely
 - [ ] 3.5 Book an appointment (day, time, barber); barber accepts / declines
 - [ ] 3.6 Push notifications (accepted, your turn soon, cancelled)

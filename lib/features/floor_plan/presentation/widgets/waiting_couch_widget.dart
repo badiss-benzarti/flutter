@@ -80,15 +80,23 @@ class WaitingCouchWidget extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
                 child: Row(
                   children: [
+                    // One line, shrunk if needed: the room relies on the
+                    // card's height not changing with long labels.
                     Expanded(
-                      child: Text(
-                        reserveLabel ?? 'RESERVE WAITING SPOT',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          height: 1.15,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          reserveLabel ?? 'RESERVE WAITING SPOT',
+                          maxLines: 1,
+                          softWrap: false,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            height: 1.15,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.4,
+                          ),
                         ),
                       ),
                     ),
