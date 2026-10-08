@@ -233,6 +233,8 @@ class AuthNotifier extends Notifier<AuthState> {
     required int totalChairs,
     required List<Barber> initialBarbers,
     required List<ServiceItem> services,
+    double? latitude,
+    double? longitude,
   }) async {
     final owner = state.owner;
     if (owner == null) return false;
@@ -256,6 +258,8 @@ class AuthNotifier extends Notifier<AuthState> {
         totalChairs: totalChairs,
         initialBarbers: initialBarbers,
         services: services,
+        latitude: latitude,
+        longitude: longitude,
       );
       if (owner.isCloudAccount) {
         try {
@@ -296,6 +300,33 @@ class AuthNotifier extends Notifier<AuthState> {
       address: address,
       phone: phone,
     );
+    await reloadShop();
+  }
+
+  /// Throws [AppException] for an invalid position.
+  Future<void> updateShopLocation(double latitude, double longitude) async {
+    final shop = state.shop;
+    if (shop == null) return;
+    await _repository.updateShopLocation(
+      shopId: shop.id,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    await reloadShop();
+  }
+
+  Future<void> setShopOpen(bool isOpen) async {
+    final shop = state.shop;
+    if (shop == null) return;
+    await _repository.setShopOpen(shopId: shop.id, isOpen: isOpen);
+    await reloadShop();
+  }
+
+  /// Throws [AppException] when the salon has no location yet.
+  Future<void> setShopListed(bool isListed) async {
+    final shop = state.shop;
+    if (shop == null) return;
+    await _repository.setShopListed(shopId: shop.id, isListed: isListed);
     await reloadShop();
   }
 

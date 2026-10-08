@@ -2,8 +2,10 @@ import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
+import 'package:barber_shop_owner/features/shop_location/location_picker_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart' show LatLng;
 import 'package:uuid/uuid.dart';
 
 class OnboardingWizardScreen extends ConsumerStatefulWidget {
@@ -22,6 +24,7 @@ class _OnboardingWizardScreenState
   final _shopNameCtrl = TextEditingController();
   final _addressCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  LatLng? _location;
 
   // Step 2: Capacity
   int _totalChairs = 8;
@@ -191,6 +194,27 @@ class _OnboardingWizardScreenState
             labelText: 'Business Phone Number *',
             hintText: '+1 555 019 2834',
             prefixIcon: Icon(Icons.phone_outlined),
+          ),
+        ),
+        const SizedBox(height: 12),
+        // Optional: can also be done later in Settings.
+        OutlinedButton.icon(
+          onPressed: () async {
+            final picked = await LocationPickerScreen.pick(
+              context,
+              initial: _location,
+              addressHint: _addressCtrl.text,
+            );
+            if (picked != null) setState(() => _location = picked);
+          },
+          icon: Icon(
+            _location == null ? Icons.add_location_alt : Icons.check_circle,
+            color: _location == null ? null : const Color(0xFF10B981),
+          ),
+          label: Text(
+            _location == null
+                ? 'Place on the map (optional)'
+                : 'Placed on the map · change',
           ),
         ),
       ],
@@ -421,6 +445,8 @@ class _OnboardingWizardScreenState
           totalChairs: _totalChairs,
           initialBarbers: _initialBarbers,
           services: _services,
+          latitude: _location?.latitude,
+          longitude: _location?.longitude,
         );
     if (!ok && mounted) {
       final message =

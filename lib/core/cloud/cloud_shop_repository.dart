@@ -28,7 +28,8 @@ class SupabaseCloudShopRepository implements CloudShopRepository {
       final shopRow = await _client
           .from('shops')
           .select(
-            'id, owner_id, name, address, phone, total_chairs, created_at',
+            'id, owner_id, name, address, phone, total_chairs, created_at, '
+            'latitude, longitude, is_open, is_listed',
           )
           .eq('owner_id', ownerId)
           .order('created_at')
@@ -75,6 +76,10 @@ class SupabaseCloudShopRepository implements CloudShopRepository {
         'phone': shop.phone,
         'total_chairs': shop.totalChairs,
         'created_at': shop.createdAt.toUtc().toIso8601String(),
+        'latitude': shop.latitude,
+        'longitude': shop.longitude,
+        'is_open': shop.isOpen,
+        'is_listed': shop.isListed && shop.hasLocation,
       });
     } catch (e) {
       throw cloudException(e);

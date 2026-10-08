@@ -299,9 +299,14 @@ class ShopRepository {
     required int totalChairs,
     required List<Barber> initialBarbers,
     required List<ServiceItem> services,
+    double? latitude,
+    double? longitude,
   }) async {
     _validateShopDetails(name: name, address: address, phone: phone);
     _validateChairCount(totalChairs);
+    if (latitude != null && longitude != null) {
+      _validateLocation(latitude, longitude);
+    }
     for (final service in services) {
       _validateService(service.name, service.price, service.durationMinutes);
     }
@@ -321,6 +326,10 @@ class ShopRepository {
         'phone': phone.trim(),
         'total_chairs': totalChairs,
         'created_at': DateTime.now().toIso8601String(),
+        if (latitude != null && longitude != null) ...{
+          'latitude': latitude,
+          'longitude': longitude,
+        },
       });
 
       for (int i = 1; i <= totalChairs; i++) {
@@ -481,6 +490,65 @@ class ShopRepository {
   }
 
   // ---------------------------------------------------------------------------
+  // Client map
+  // ---------------------------------------------------------------------------
+
+  Future<void> updateShopLocation({
+    required String shopId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    _validateLocation(latitude, longitude);
+    final db = await _dbService.database;
+    await db.update(
+      'shops',
+      {'latitude': latitude, 'longitude': longitude},
+      where: 'id = ?',
+      whereArgs: [shopId],
+    );
+  }
+
+  Future<void> setShopOpen({
+    required String shopId,
+    required bool isOpen,
+  }) async {
+    final db = await _dbService.database;
+    await db.update(
+      'shops',
+      {'is_open': isOpen ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [shopId],
+    );
+  }
+
+  /// Shows or hides the salon on the client map. Needs a location first.
+  Future<void> setShopListed({
+    required String shopId,
+    required bool isListed,
+  }) async {
+    final db = await _dbService.database;
+    if (isListed) {
+      final rows = await db.query(
+        'shops',
+        columns: ['latitude', 'longitude'],
+        where: 'id = ?',
+        whereArgs: [shopId],
+      );
+      if (rows.isEmpty ||
+          rows.first['latitude'] == null ||
+          rows.first['longitude'] == null) {
+        throw const AppException('Place your salon on the map first.');
+      }
+    }
+    await db.update(
+      'shops',
+      {'is_listed': isListed ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [shopId],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Floor capacity
   // ---------------------------------------------------------------------------
 
@@ -560,6 +628,15 @@ class ShopRepository {
   }) {
     if (name.trim().isEmpty || address.trim().isEmpty || phone.trim().isEmpty) {
       throw const AppException('Shop name, address and phone are required.');
+    }
+  }
+
+  void _validateLocation(double latitude, double longitude) {
+    if (latitude.isNaN ||
+        longitude.isNaN ||
+        latitude.abs() > 90 ||
+        longitude.abs() > 180) {
+      throw const AppException('This location is not valid.');
     }
   }
 

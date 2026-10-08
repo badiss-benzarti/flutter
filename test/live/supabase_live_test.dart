@@ -191,6 +191,35 @@ void main() {
           await visitor.from('chair_clients').select().eq('shop_id', shopId),
           isEmpty,
         );
+
+        // Placed on the map and listed: visitors see the salon and its
+        // floor, still never who is sitting in the chairs.
+        await sync.push('shops', shopId, shopId, {
+          'name': 'Live Check Salon',
+          'address': 'Tunis',
+          'phone': '71000000',
+          'total_chairs': 3,
+          'latitude': 36.8008,
+          'longitude': 10.18,
+          'is_open': 1,
+          'is_listed': 1,
+        });
+        final pulledShop = await sync.pull('shops', shopId, null);
+        expect(pulledShop.rows.single['is_listed'], 1);
+        expect(pulledShop.rows.single['latitude'], 36.8008);
+        final listed = await visitor
+            .from('shops')
+            .select('name, latitude, longitude, is_open')
+            .eq('id', shopId);
+        expect(listed.single['name'], 'Live Check Salon');
+        expect(
+          await visitor.from('chairs').select().eq('shop_id', shopId),
+          hasLength(3),
+        );
+        expect(
+          await visitor.from('chair_clients').select().eq('shop_id', shopId),
+          isEmpty,
+        );
       } finally {
         await owner.from('shops').delete().eq('id', shopId);
         await auth.signOut();

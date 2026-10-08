@@ -61,6 +61,10 @@ class SupabaseSyncRemote implements SyncRemote {
         'address': _clip(row['address'], 160),
         'phone': _clip(row['phone'], 30),
         'total_chairs': row['total_chairs'],
+        'latitude': row['latitude'],
+        'longitude': row['longitude'],
+        'is_open': _bool(row['is_open']),
+        'is_listed': _bool(row['is_listed']),
       })
       .eq('id', shopId);
 
@@ -207,7 +211,8 @@ class SupabaseSyncRemote implements SyncRemote {
         'shops' => _changes(
           await _fetch(
             'shops',
-            'id, name, address, phone, total_chairs, updated_at',
+            'id, name, address, phone, total_chairs, latitude, longitude, '
+                'is_open, is_listed, updated_at',
             'id',
             shopId,
             after,
@@ -219,6 +224,10 @@ class SupabaseSyncRemote implements SyncRemote {
             'address': r['address'],
             'phone': r['phone'],
             'total_chairs': r['total_chairs'],
+            'latitude': r['latitude'],
+            'longitude': r['longitude'],
+            'is_open': _int(r['is_open']),
+            'is_listed': _int(r['is_listed']),
           },
         ),
         'barbers' => _changes(

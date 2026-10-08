@@ -95,6 +95,9 @@ class DemoSeeder {
       phone: '+216 71 234 567',
       totalChairs: 8,
       initialBarbers: team,
+      // Avenue Habib Bourguiba, Tunis.
+      latitude: 36.8008,
+      longitude: 10.1800,
       services: const [
         ServiceItem(id: '', shopId: '', name: 'Haircut', price: 25),
         ServiceItem(

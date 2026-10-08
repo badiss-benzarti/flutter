@@ -19,7 +19,7 @@ class DatabaseService {
   Future<Database>? _opening;
 
   static const String _dbFileName = 'barber_shop_owner_secure.db';
-  static const int schemaVersion = 3;
+  static const int schemaVersion = 4;
 
   /// The open database. Concurrent callers share the same connection.
   Future<Database> get database {
@@ -166,6 +166,9 @@ class DatabaseService {
     if (oldVersion < 3 && newVersion >= 3) {
       await _migrateToV3(db);
     }
+    if (oldVersion < 4 && newVersion >= 4) {
+      await _migrateToV4(db);
+    }
   }
 
   /// v2: barbers are archived instead of deleted (deleting would cascade to
@@ -194,6 +197,20 @@ class DatabaseService {
   Future<void> _migrateToV3(Database db) async {
     final batch = db.batch();
     SyncSchema.createStatements().forEach(batch.execute);
+    await batch.commit(noResult: true);
+  }
+
+  /// v4: where the salon is and whether clients can see it (client map).
+  Future<void> _migrateToV4(Database db) async {
+    final batch = db.batch()
+      ..execute('ALTER TABLE shops ADD COLUMN latitude REAL;')
+      ..execute('ALTER TABLE shops ADD COLUMN longitude REAL;')
+      ..execute(
+        'ALTER TABLE shops ADD COLUMN is_open INTEGER NOT NULL DEFAULT 1;',
+      )
+      ..execute(
+        'ALTER TABLE shops ADD COLUMN is_listed INTEGER NOT NULL DEFAULT 0;',
+      );
     await batch.commit(noResult: true);
   }
 

@@ -44,6 +44,10 @@ class ShopProfile {
     required this.totalChairs,
     required this.createdAt,
     this.services = const [],
+    this.latitude,
+    this.longitude,
+    this.isOpen = true,
+    this.isListed = false,
   });
 
   final String id;
@@ -55,6 +59,18 @@ class ShopProfile {
   final DateTime createdAt;
   final List<ServiceItem> services;
 
+  /// Where the salon is, for the client map. Both null until it is placed.
+  final double? latitude;
+  final double? longitude;
+
+  /// Open now (shown to clients as open or closed).
+  final bool isOpen;
+
+  /// Shown on the client map. Requires a location.
+  final bool isListed;
+
+  bool get hasLocation => latitude != null && longitude != null;
+
   ShopProfile copyWith({
     String? id,
     String? ownerId,
@@ -64,6 +80,10 @@ class ShopProfile {
     int? totalChairs,
     DateTime? createdAt,
     List<ServiceItem>? services,
+    double? latitude,
+    double? longitude,
+    bool? isOpen,
+    bool? isListed,
   }) {
     return ShopProfile(
       id: id ?? this.id,
@@ -74,6 +94,10 @@ class ShopProfile {
       totalChairs: totalChairs ?? this.totalChairs,
       createdAt: createdAt ?? this.createdAt,
       services: services ?? this.services,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      isOpen: isOpen ?? this.isOpen,
+      isListed: isListed ?? this.isListed,
     );
   }
 
@@ -86,13 +110,21 @@ class ShopProfile {
       'phone': phone,
       'total_chairs': totalChairs,
       'created_at': createdAt.toIso8601String(),
+      'latitude': latitude,
+      'longitude': longitude,
+      'is_open': isOpen ? 1 : 0,
+      'is_listed': isListed ? 1 : 0,
     };
   }
 
+  /// Reads a row from this device (flags as 0/1) or the server (booleans).
   factory ShopProfile.fromMap(
     Map<String, dynamic> map, {
     List<ServiceItem> services = const [],
   }) {
+    bool flag(Object? value, bool fallback) =>
+        value == null ? fallback : value == true || value == 1;
+
     return ShopProfile(
       id: map['id'] as String,
       ownerId: map['owner_id'] as String,
@@ -102,6 +134,10 @@ class ShopProfile {
       totalChairs: map['total_chairs'] as int? ?? 8,
       createdAt: DateTime.parse(map['created_at'] as String),
       services: services,
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
+      isOpen: flag(map['is_open'], true),
+      isListed: flag(map['is_listed'], false),
     );
   }
 }

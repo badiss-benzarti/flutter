@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' show LatLng;
 
+import '../../core/maps/map_tiles.dart';
 import '../mock_data.dart';
 import '../widgets/ui.dart';
 import 'salon_page.dart';
@@ -36,10 +37,7 @@ class _SalonMapScreenState extends State<SalonMapScreen> {
             onTap: (_, _) => setState(() => _selected = null),
           ),
           children: [
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.barberflow.barber_shop_owner',
-            ),
+            MapTiles.layer(),
             MarkerLayer(
               markers: [
                 const Marker(
@@ -65,11 +63,7 @@ class _SalonMapScreenState extends State<SalonMapScreen> {
                   ),
               ],
             ),
-            const RichAttributionWidget(
-              attributions: [
-                TextSourceAttribution('OpenStreetMap contributors'),
-              ],
-            ),
+            MapTiles.attribution(),
           ],
         ),
         SafeArea(

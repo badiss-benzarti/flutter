@@ -5,6 +5,7 @@ import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.d
 import 'package:barber_shop_owner/features/auth_onboarding/presentation/auth_providers.dart';
 import 'package:barber_shop_owner/features/barbers/presentation/barber_providers.dart';
 import 'package:barber_shop_owner/features/floor_plan/presentation/floor_plan_providers.dart';
+import 'package:barber_shop_owner/features/shop_location/salon_map_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,6 +39,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const _SyncCard(),
           const SizedBox(height: 16),
           _ShopProfileCard(shop: shop),
+          const SizedBox(height: 16),
+          SalonMapCard(shop: shop),
           const SizedBox(height: 16),
           _ServicesCard(services: shop.services),
           const SizedBox(height: 16),
