@@ -105,54 +105,60 @@ class RoomView extends StatelessWidget {
           onTap: onStationTap == null ? () {} : () => onStationTap!(s),
         );
 
-        final room = SingleChildScrollView(
+        // The free space goes between the chairs and the couch, so the
+        // couch always sits at the bottom, just above the navigation bar;
+        // larger shops scroll with the couch at the end.
+        final room = CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: CustomPaint(
-              painter: const RoomShellPainter(
-                ceilingHeight: _ceilingHeight,
-                wallWidth: _wallWidth,
-              ),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: _ceilingHeight + _hudHeight,
-                    child: _RoomHeader(
-                      shopName: shopName,
-                      established: established,
-                      active: active,
-                      total: totalChairs,
-                      waiting: waitingCount,
-                    ),
-                  ),
-                  for (var i = 0; i < rows; i++)
+          slivers: [
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: CustomPaint(
+                painter: const RoomShellPainter(
+                  ceilingHeight: _ceilingHeight,
+                  wallWidth: _wallWidth,
+                ),
+                child: Column(
+                  children: [
                     SizedBox(
-                      height: rowHeight,
-                      child: Row(
-                        children: [
-                          Expanded(child: station(left[i], true)),
-                          Expanded(
-                            child: i < right.length
-                                ? station(right[i], false)
-                                : const SizedBox.shrink(),
-                          ),
-                        ],
+                      height: _ceilingHeight + _hudHeight,
+                      child: _RoomHeader(
+                        shopName: shopName,
+                        established: established,
+                        active: active,
+                        total: totalChairs,
+                        waiting: waitingCount,
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10, bottom: 14),
-                    child: WaitingCouchWidget(
-                      waitingCount: waitingCount,
-                      onReserveTap: onReserveTap ?? () {},
-                      onQueueViewTap: onQueueViewTap ?? () {},
-                      reserveLabel: reserveLabel,
+                    for (var i = 0; i < rows; i++)
+                      SizedBox(
+                        height: rowHeight,
+                        child: Row(
+                          children: [
+                            Expanded(child: station(left[i], true)),
+                            Expanded(
+                              child: i < right.length
+                                  ? station(right[i], false)
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10, bottom: 14),
+                      child: WaitingCouchWidget(
+                        waitingCount: waitingCount,
+                        onReserveTap: onReserveTap ?? () {},
+                        onQueueViewTap: onQueueViewTap ?? () {},
+                        reserveLabel: reserveLabel,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         );
 
         return onRefresh == null

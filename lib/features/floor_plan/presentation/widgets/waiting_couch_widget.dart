@@ -23,13 +23,14 @@ class WaitingCouchWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The card is clipped to its rounded shape and the outline is drawn on
+    // top, so the black action bar reaches the corners with no white edge.
     return Container(
       width: 200,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: const BorderRadius.all(_radius),
-        border: Border.all(color: RoomInk.ink, width: 2),
-        boxShadow: const [
+        borderRadius: BorderRadius.all(_radius),
+        boxShadow: [
           BoxShadow(
             color: Color(0x33000000),
             blurRadius: 18,
@@ -37,6 +38,11 @@ class WaitingCouchWidget extends StatelessWidget {
           ),
         ],
       ),
+      foregroundDecoration: BoxDecoration(
+        borderRadius: const BorderRadius.all(_radius),
+        border: Border.all(color: RoomInk.ink, width: 2),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -68,10 +74,8 @@ class WaitingCouchWidget extends StatelessWidget {
           ),
           Material(
             color: RoomInk.ink,
-            borderRadius: const BorderRadius.vertical(bottom: _radius),
             child: InkWell(
               onTap: onReserveTap,
-              borderRadius: const BorderRadius.vertical(bottom: _radius),
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
                 child: Row(
