@@ -35,3 +35,22 @@ The app uses the project URL and the **publishable** key
 (`lib/core/config/supabase_config.dart`); both are public by design.
 The **secret** key and the database password must never be committed or
 shared.
+
+## Live checks and the demo salon
+
+These run against the real project, only when asked:
+
+```sh
+# Round trip: sign-up, salon upload, sync, what visitors can see.
+# Creates a throwaway "live-check-..." user to delete afterwards.
+flutter test test/live/supabase_live_test.dart --dart-define=LIVE_SUPABASE=true
+
+# Public demo salon (listed on the client map), under its own account.
+# Keep the password private: whoever has it can edit the public salon.
+flutter test test/live/seed_demo_salon_test.dart \
+  --dart-define=SEED_DEMO=true --dart-define=DEMO_PASSWORD=YOUR_SECRET
+# Add --dart-define=DEMO_RESET=true to rebuild it with fresh sales history.
+```
+
+The in-app "Explore the demo shop" button stays on the device: its password
+is shown on screen, so it is never uploaded.

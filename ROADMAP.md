@@ -22,7 +22,7 @@ city Tunis.
 - [ ] 1.3b Google sign-in *(needs a Google Cloud setup)*
 - [x] 1.4 Offline mode for the owner: local SQLite copy that syncs
 - [x] 1.5 Place the salon on the map (setup or Settings), show it to clients, open / closed
-- [ ] 1.6 Demo shop on the server; tests against a test database
+- [x] 1.6 Public demo salon on the server (own account, listed on the map); schema tests on a throwaway Postgres in CI, opt-in live checks
 
 ## Phase 2: Barber side
 - [ ] 2.1 Invite code to join a salon

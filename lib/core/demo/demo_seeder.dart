@@ -12,7 +12,8 @@ import '../../features/finance/domain/service_ticket.dart';
 
 /// Creates a demo owner account with a fully populated shop: barbers,
 /// services, a month of sales history, services in progress and clients
-/// waiting. Used by the "Explore the demo shop" button.
+/// waiting. Used by the "Explore the demo shop" button (on this device only)
+/// and to seed the public demo salon on the server.
 class DemoSeeder {
   DemoSeeder({
     required this._dbService,
@@ -68,7 +69,13 @@ class DemoSeeder {
       password: password,
       fullName: 'Demo Owner',
     );
+    await populateShop(owner.id);
+  }
 
+  /// Creates the demo salon for [ownerId] and fills it: team, prices, a
+  /// month of sales, two cuts in progress and three clients waiting.
+  Future<ShopProfile> populateShop(String ownerId) async {
+    final db = await _dbService.database;
     final now = DateTime.now();
     Barber barber(String name, String phone, double rate, int? chair) => Barber(
       id: _uuid.v4(),
@@ -89,7 +96,7 @@ class DemoSeeder {
     ];
 
     final shop = await _shops.setupShopProfile(
-      ownerId: owner.id,
+      ownerId: ownerId,
       name: 'Blade & Crown',
       address: 'Avenue Habib Bourguiba, Tunis',
       phone: '+216 71 234 567',
@@ -148,6 +155,7 @@ class DemoSeeder {
 
     await _insertHistory(shop, team.take(4).toList(), now);
     await _setLiveFloor(shop.id, now);
+    return shop;
   }
 
   /// A month of completed sales, deterministic so the demo looks the same
