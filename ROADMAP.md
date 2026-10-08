@@ -28,7 +28,7 @@ city Tunis.
 - [x] 2.1 Invite code to join a salon (one single-use code per barber, from Team)
 - [x] 2.2 Barber home: live salon floor, queue ("asked for you"), on-duty toggle
 - [x] 2.3 My earnings: today / 7 days / 30 days, commission + tips, own clients only
-- [ ] 2.4 Portfolio: photo upload with compression, client consent, delete / report
+- [x] 2.4 Portfolio as a social profile: photo + caption (compressed, client consent), comments, photo stars; barber rating from rated visits only
 
 ## Phase 3: Client side
 - [ ] 3.1 Client sign-up / login
