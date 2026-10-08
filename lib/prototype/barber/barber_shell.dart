@@ -469,7 +469,7 @@ class _EarningsScreenState extends State<_EarningsScreen> {
                 const Card(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(8, 16, 8, 12),
-                    child: SizedBox(height: 150, child: _WeekChart(_week)),
+                    child: WeekBarChart(_week),
                   ),
                 ),
                 const SectionHeading('Service Ledger'),
@@ -505,51 +505,6 @@ class _EarningsScreenState extends State<_EarningsScreen> {
       amount: dt(share + extra),
       note: extra > 0 ? '+${dt(extra)} VIP' : 'My share',
       noteColor: extra > 0 ? gold : const Color(0xFF10B981),
-    );
-  }
-}
-
-class _WeekChart extends StatelessWidget {
-  const _WeekChart(this.values);
-
-  final List<double> values;
-
-  @override
-  Widget build(BuildContext context) {
-    final peak = values.reduce((a, b) => a > b ? a : b);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        for (var i = 0; i < values.length; i++)
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  '${values[i].toInt()}',
-                  style: const TextStyle(fontSize: 10, color: muted),
-                ),
-                const SizedBox(height: 4),
-                Container(
-                  height: 100 * values[i] / peak,
-                  margin: const EdgeInsets.symmetric(horizontal: 6),
-                  decoration: BoxDecoration(
-                    color: i == values.length - 1 ? gold : Colors.black,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }

@@ -15,6 +15,7 @@ import 'package:barber_shop_owner/core/errors/app_exception.dart';
 import 'package:barber_shop_owner/core/sync/supabase_sync_remote.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_profile.dart';
 import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_snapshot.dart';
+import 'package:barber_shop_owner/features/barber_app/barber_earnings.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_salon.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
@@ -231,6 +232,12 @@ void main() {
           salonRepo.setMyDuty(onDuty: false),
           throwsA(isA<AppException>()),
         );
+
+        // His earnings: only his own sales, commission plus tip.
+        final earnings = await SupabaseBarberEarningsRepository(barberClient)
+            .since(barberId, DateTime.now().subtract(const Duration(days: 1)));
+        expect(earnings.single.clientName, 'Aziz');
+        expect(earnings.single.earned, 14.75);
 
         // He asks for another name; it applies once the owner accepts.
         await links.requestNameChange('Samy');

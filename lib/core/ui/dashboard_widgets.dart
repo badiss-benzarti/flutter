@@ -279,3 +279,62 @@ class LedgerTile extends StatelessWidget {
     );
   }
 }
+
+/// Bars for the last 7 days, oldest first; today's bar is gold.
+class WeekBarChart extends StatelessWidget {
+  const WeekBarChart(this.values, {super.key, this.height = 150});
+
+  /// Exactly 7 values; the last one is today.
+  final List<double> values;
+  final double height;
+
+  static const _letters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  @override
+  Widget build(BuildContext context) {
+    final peak = values.fold<double>(0, (a, b) => a > b ? a : b);
+    final today = DateTime.now();
+    return SizedBox(
+      height: height,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < values.length; i++)
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    values[i].round().toString(),
+                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    height: peak == 0 ? 2 : (height - 50) * values[i] / peak,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: BoxDecoration(
+                      color: i == values.length - 1
+                          ? MoneyHeroCard.gold
+                          : Colors.black,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _letters[today
+                            .subtract(Duration(days: values.length - 1 - i))
+                            .weekday -
+                        1],
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

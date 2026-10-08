@@ -299,11 +299,6 @@ class BarberProfileTab extends ConsumerWidget {
               child: Column(
                 children: [
                   const ListTile(
-                    leading: Icon(Icons.account_balance_wallet_outlined),
-                    title: Text('My earnings'),
-                    subtitle: Text('Commission and tips, day by day'),
-                  ),
-                  const ListTile(
                     leading: Icon(Icons.photo_camera_outlined),
                     title: Text('Portfolio'),
                     subtitle: Text('Photos of your cuts for clients'),

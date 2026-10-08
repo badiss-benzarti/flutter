@@ -1,9 +1,12 @@
 import 'package:barber_shop_owner/core/cloud/cloud_auth.dart';
 import 'package:barber_shop_owner/core/providers/cloud_providers.dart';
 import 'package:barber_shop_owner/core/theme/app_theme.dart';
+import 'package:barber_shop_owner/core/ui/ui_helpers.dart';
+import 'package:barber_shop_owner/features/barber_app/barber_earnings.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_salon.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_screens.dart';
+import 'package:barber_shop_owner/features/finance/domain/service_ticket.dart';
 import 'package:barber_shop_owner/features/floor_plan/domain/station.dart';
 import 'package:barber_shop_owner/features/queue/domain/queue_item.dart';
 import 'package:flutter/material.dart';
@@ -97,6 +100,21 @@ class _Salon implements BarberSalonRepository {
       walkIns.add(clientName);
 }
 
+class _Earnings implements BarberEarningsRepository {
+  @override
+  Future<List<EarningLine>> since(String barberId, DateTime from) async => [
+    EarningLine(
+      time: DateTime.now().subtract(const Duration(minutes: 30)),
+      clientName: 'Omar',
+      services: 'Haircut',
+      commission: 15,
+      tip: 2,
+      paymentMethod: PaymentMethod.cash,
+      chairNumber: 1,
+    ),
+  ];
+}
+
 BarberLink _sami({required bool onDuty}) => BarberLink(
   barberId: 'b1',
   barberName: 'Sami',
@@ -131,6 +149,7 @@ void main() {
           cloudAuthProvider.overrideWithValue(auth),
           barberLinkRepositoryProvider.overrideWithValue(links),
           barberSalonRepositoryProvider.overrideWithValue(salon),
+          barberEarningsRepositoryProvider.overrideWithValue(_Earnings()),
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme,
@@ -147,6 +166,14 @@ void main() {
     expect(find.textContaining('#1 · Sami'), findsOneWidget);
     expect(find.textContaining('#2 · Karim'), findsOneWidget);
     expect(find.text('2 clients waiting'), findsOneWidget);
+
+    // Earnings: today's commission and tips, only his own.
+    await tester.tap(find.text('Earnings'));
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('My Earnings'), findsOneWidget);
+    expect(find.text('TODAY · YOU EARNED'), findsOneWidget);
+    expect(find.text('Omar'), findsOneWidget);
+    expect(find.text('Tip ${formatMoney(2)}'), findsOneWidget);
 
     // Agenda: my chair, the queue, who asked for me.
     await tester.tap(find.text('Agenda'));
