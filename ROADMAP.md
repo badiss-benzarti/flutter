@@ -25,7 +25,7 @@ city Tunis.
 - [x] 1.6 Public demo salon on the server (own account, listed on the map); schema tests on a throwaway Postgres in CI, opt-in live checks
 
 ## Phase 2: Barber side
-- [ ] 2.1 Invite code to join a salon
+- [x] 2.1 Invite code to join a salon (one single-use code per barber, from Team)
 - [ ] 2.2 Barber home: next clients, queue, on-duty toggle
 - [ ] 2.3 My earnings: day / week / month, commission + tips
 - [ ] 2.4 Portfolio: photo upload with compression, client consent, delete / report
