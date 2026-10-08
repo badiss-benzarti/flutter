@@ -13,6 +13,7 @@ class BarberLink {
     required this.commissionRate,
     required this.isOnDuty,
     this.assignedChair,
+    this.requestedName,
   });
 
   final String barberId;
@@ -22,6 +23,24 @@ class BarberLink {
   final double commissionRate;
   final bool isOnDuty;
   final int? assignedChair;
+
+  /// A new name the barber asked for, waiting for the owner.
+  final String? requestedName;
+}
+
+/// What an invitation code opens, shown before the barber signs up.
+class InvitePreview {
+  const InvitePreview({
+    required this.code,
+    required this.shopName,
+    required this.barberName,
+  });
+
+  final String code;
+  final String shopName;
+
+  /// The name the owner registered; it becomes the account's name.
+  final String barberName;
 }
 
 /// Server access for barber accounts. Failures are thrown as [AppException].
@@ -31,6 +50,15 @@ abstract class BarberLinkRepository {
 
   /// Links this account with an invitation code from the salon owner.
   Future<BarberLink> join(String userId, String code);
+
+  /// What [code] opens, or null if it is not valid. Needs no account.
+  Future<InvitePreview?> preview(String code);
+
+  /// Asks the owner to change this barber's name.
+  Future<void> requestNameChange(String name);
+
+  /// Unlinks this account from its salon. The account stays.
+  Future<void> leave();
 }
 
 class SupabaseBarberLinkRepository implements BarberLinkRepository {
@@ -44,7 +72,7 @@ class SupabaseBarberLinkRepository implements BarberLinkRepository {
       final row = await _client
           .from('barbers')
           .select(
-            'id, name, shop_id, assigned_chair, is_on_duty, '
+            'id, name, requested_name, shop_id, assigned_chair, is_on_duty, '
             'shops(name), barber_private(commission_rate)',
           )
           .eq('profile_id', userId)
@@ -61,6 +89,7 @@ class SupabaseBarberLinkRepository implements BarberLinkRepository {
         commissionRate: (private?['commission_rate'] as num?)?.toDouble() ?? 0,
         isOnDuty: row['is_on_duty'] as bool,
         assignedChair: row['assigned_chair'] as int?,
+        requestedName: row['requested_name'] as String?,
       );
     } catch (e) {
       throw cloudException(e);
@@ -69,7 +98,7 @@ class SupabaseBarberLinkRepository implements BarberLinkRepository {
 
   @override
   Future<BarberLink> join(String userId, String code) async {
-    final cleaned = code.replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
+    final cleaned = normalizeCode(code);
     if (cleaned.length != 8) {
       throw const AppException('The code has 8 characters.');
     }
@@ -87,6 +116,54 @@ class SupabaseBarberLinkRepository implements BarberLinkRepository {
     }
     return link;
   }
+
+  @override
+  Future<InvitePreview?> preview(String code) async {
+    final cleaned = normalizeCode(code);
+    if (cleaned.length != 8) {
+      throw const AppException('The code has 8 characters.');
+    }
+    try {
+      final rows = await _client.rpc<List<dynamic>>(
+        'preview_invite',
+        params: {'p_code': cleaned},
+      );
+      if (rows.isEmpty) return null;
+      final row = rows.first as Map<String, dynamic>;
+      return InvitePreview(
+        code: cleaned,
+        shopName: row['shop_name'] as String,
+        barberName: row['barber_name'] as String,
+      );
+    } catch (e) {
+      throw cloudException(e);
+    }
+  }
+
+  @override
+  Future<void> requestNameChange(String name) async {
+    try {
+      await _client.rpc<dynamic>(
+        'request_name_change',
+        params: {'p_name': name},
+      );
+    } catch (e) {
+      throw cloudException(e);
+    }
+  }
+
+  @override
+  Future<void> leave() async {
+    try {
+      await _client.rpc<dynamic>('leave_salon');
+    } catch (e) {
+      throw cloudException(e);
+    }
+  }
+
+  /// Upper case, without spaces or dashes.
+  static String normalizeCode(String code) =>
+      code.replaceAll(RegExp(r'[\s-]'), '').toUpperCase();
 
   /// One-to-one / many-to-one embeds come back as an object (older servers:
   /// a list).

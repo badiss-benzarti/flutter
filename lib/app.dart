@@ -7,6 +7,7 @@ import 'features/auth_onboarding/presentation/screens/auth_screen.dart';
 import 'features/auth_onboarding/presentation/screens/onboarding_wizard_screen.dart';
 import 'features/barber_app/barber_screens.dart';
 import 'features/barber_app/barber_session.dart';
+import 'features/barber_app/barber_start_screen.dart';
 import 'features/dashboard/presentation/screens/main_navigation_screen.dart';
 import 'features/welcome/entry_role.dart';
 import 'features/welcome/welcome_screen.dart';
@@ -33,7 +34,7 @@ class BarberShopOwnerApp extends ConsumerWidget {
           ? const BarberGate()
           : switch (ref.watch(entryRoleProvider)) {
               EntryRole.owner => const AuthScreen(),
-              EntryRole.barber => const AuthScreen(forBarber: true),
+              EntryRole.barber => const BarberStartScreen(),
               _ => const WelcomeScreen(),
             };
     } else if (!authState.hasCompletedOnboarding) {

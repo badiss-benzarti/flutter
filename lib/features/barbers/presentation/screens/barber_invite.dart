@@ -9,8 +9,10 @@ import '../../../../core/providers/cloud_providers.dart';
 import '../../../../core/ui/ui_helpers.dart';
 import '../../../auth_onboarding/presentation/auth_providers.dart';
 import '../../domain/barber.dart';
+import '../barber_providers.dart';
 
-/// On a roster card: "Linked to the app", or a button to invite the barber.
+/// On a roster card: "Linked to the app" (with any name change the barber
+/// asked for), or a button to invite the barber.
 class BarberAppLink extends ConsumerWidget {
   const BarberAppLink({super.key, required this.barber});
 
@@ -20,6 +22,20 @@ class BarberAppLink extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final status = _status(ref);
+    if (barber.requestedName == null) return status;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        status,
+        const SizedBox(height: 6),
+        _NameRequest(barber: barber),
+      ],
+    );
+  }
+
+  Widget _status(WidgetRef ref) {
     if (barber.isLinkedToApp) {
       return const Row(
         mainAxisSize: MainAxisSize.min,
@@ -51,7 +67,7 @@ class BarberAppLink extends ConsumerWidget {
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
         visualDensity: VisualDensity.compact,
       ),
-      onPressed: () => _invite(context, ref),
+      onPressed: () => _invite(ref.context, ref),
       icon: const Icon(Icons.send_to_mobile_outlined, size: 16),
       label: const Text(
         'Invite to the app',
@@ -82,6 +98,72 @@ class BarberAppLink extends ConsumerWidget {
     await showDialog<void>(
       context: context,
       builder: (_) => _InviteDialog(barberName: barber.name, invite: invite!),
+    );
+  }
+}
+
+/// "Sami asks to be called Samy": the owner accepts or declines.
+class _NameRequest extends ConsumerWidget {
+  const _NameRequest({required this.barber});
+
+  final Barber barber;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wanted = barber.requestedName!;
+
+    Future<void> answer({required bool accept}) => runAction(
+      context,
+      () async {
+        await ref
+            .read(cloudInvitesProvider)
+            .answerNameChange(barber.id, accept: accept);
+        await ref
+            .read(barberRepositoryProvider)
+            .applyNameAnswer(barber.id, acceptedName: accept ? wanted : null);
+        ref.invalidate(barberListProvider);
+      },
+      successMessage: accept
+          ? '${barber.name} is now called $wanted.'
+          : 'Name change declined.',
+    );
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 8, 6, 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFEF3C7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Asks to be called "$wanted"',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.black,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => answer(accept: false),
+                child: const Text('Decline'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => answer(accept: true),
+                child: const Text('Accept'),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

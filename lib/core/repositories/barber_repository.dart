@@ -84,6 +84,17 @@ class BarberRepository {
     });
   }
 
+  /// Mirrors the owner's answer to a name request, as the server applied it.
+  Future<void> applyNameAnswer(String barberId, {String? acceptedName}) async {
+    final db = await _dbService.database;
+    await db.update(
+      'barbers',
+      {'requested_name': null, 'name': ?acceptedName},
+      where: 'id = ?',
+      whereArgs: [barberId],
+    );
+  }
+
   /// Removes a barber from the roster while keeping their financial history.
   Future<void> archiveBarber(String barberId) async {
     final db = await _dbService.database;

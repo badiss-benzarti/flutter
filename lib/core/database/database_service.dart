@@ -19,7 +19,7 @@ class DatabaseService {
   Future<Database>? _opening;
 
   static const String _dbFileName = 'barber_shop_owner_secure.db';
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 6;
 
   /// The open database. Concurrent callers share the same connection.
   Future<Database> get database {
@@ -172,6 +172,9 @@ class DatabaseService {
     if (oldVersion < 5 && newVersion >= 5) {
       await _migrateToV5(db);
     }
+    if (oldVersion < 6 && newVersion >= 6) {
+      await _migrateToV6(db);
+    }
   }
 
   /// v2: barbers are archived instead of deleted (deleting would cascade to
@@ -220,6 +223,11 @@ class DatabaseService {
   /// v5: which barbers linked their own account (barber app).
   Future<void> _migrateToV5(Database db) async {
     await db.execute('ALTER TABLE barbers ADD COLUMN profile_id TEXT;');
+  }
+
+  /// v6: a new name a barber asked for, waiting for the owner.
+  Future<void> _migrateToV6(Database db) async {
+    await db.execute('ALTER TABLE barbers ADD COLUMN requested_name TEXT;');
   }
 
   /// Closes the connection; the next access reopens it.

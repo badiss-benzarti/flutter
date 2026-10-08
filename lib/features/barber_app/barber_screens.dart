@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../prototype/barber/barber_shell.dart';
+import '../../core/ui/ui_helpers.dart';
 import 'barber_session.dart';
 
 /// What a signed-in barber sees: the code screen until they join a salon,
@@ -216,6 +217,11 @@ class BarberHomeScreen extends ConsumerWidget {
                 subtitle: Text('Barber at ${link.shopName}'),
               ),
             ),
+            if (link.requestedName != null)
+              _MessageBox(
+                'You asked to be called "${link.requestedName}". Your salon '
+                'owner will accept or decline it.',
+              ),
             const SizedBox(height: 12),
             Card(
               child: Column(
@@ -254,6 +260,30 @@ class BarberHomeScreen extends ConsumerWidget {
                       link.isOnDuty ? 'On duty' : 'Off duty',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.badge_outlined),
+                    title: const Text('Ask to change my name'),
+                    subtitle: const Text('Your salon owner approves it'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _askNewName(context, ref, link.barberName),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text(
+                      'Leave the salon',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    subtitle: const Text('You keep your account'),
+                    onTap: () => _leave(context, ref, link.shopName),
                   ),
                 ],
               ),
@@ -301,6 +331,63 @@ class BarberHomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _askNewName(
+  BuildContext context,
+  WidgetRef ref,
+  String current,
+) async {
+  final controller = TextEditingController(text: current);
+  final name = await showDialog<String>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Ask to change my name'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        maxLength: 60,
+        textCapitalization: TextCapitalization.words,
+        decoration: const InputDecoration(labelText: 'Name clients will see'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: Colors.black),
+          onPressed: () => Navigator.pop(dialogContext, controller.text),
+          child: const Text('Send to my owner'),
+        ),
+      ],
+    ),
+  );
+  controller.dispose();
+  if (name == null || name.trim().isEmpty || !context.mounted) return;
+  await runAction(
+    context,
+    () => ref.read(barberSessionProvider.notifier).requestNameChange(name),
+    successMessage: 'Sent. Your owner will answer.',
+  );
+}
+
+Future<void> _leave(BuildContext context, WidgetRef ref, String shop) async {
+  final confirmed = await confirmAction(
+    context,
+    title: 'Leave $shop?',
+    message:
+        'You keep your account, but you will no longer see this salon, '
+        'its floor or your earnings there. The salon keeps your history. '
+        'You can join again with a new code.',
+    confirmLabel: 'Leave',
+    destructive: true,
+  );
+  if (!confirmed || !context.mounted) return;
+  await runAction(
+    context,
+    () => ref.read(barberSessionProvider.notifier).leave(),
+  );
 }
 
 class _MessageBox extends StatelessWidget {

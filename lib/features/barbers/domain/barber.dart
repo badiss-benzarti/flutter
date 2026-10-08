@@ -10,6 +10,7 @@ class Barber {
     required this.createdAt,
     this.isArchived = false,
     this.profileId,
+    this.requestedName,
   });
 
   final String id;
@@ -28,6 +29,10 @@ class Barber {
 
   bool get isLinkedToApp => profileId != null;
 
+  /// A new name the barber asked for from their app; the owner accepts or
+  /// declines it. Set by the server only.
+  final String? requestedName;
+
   Barber copyWith({
     String? id,
     String? shopId,
@@ -39,6 +44,7 @@ class Barber {
     DateTime? createdAt,
     bool? isArchived,
     String? profileId,
+    String? requestedName,
     bool clearAssignedChair = false,
   }) {
     return Barber(
@@ -54,6 +60,7 @@ class Barber {
       createdAt: createdAt ?? this.createdAt,
       isArchived: isArchived ?? this.isArchived,
       profileId: profileId ?? this.profileId,
+      requestedName: requestedName ?? this.requestedName,
     );
   }
 
@@ -69,6 +76,7 @@ class Barber {
       'created_at': createdAt.toIso8601String(),
       'is_archived': isArchived ? 1 : 0,
       'profile_id': profileId,
+      'requested_name': requestedName,
     };
   }
 
@@ -84,6 +92,7 @@ class Barber {
       createdAt: DateTime.parse(map['created_at'] as String),
       isArchived: (map['is_archived'] as int? ?? 0) == 1,
       profileId: map['profile_id'] as String?,
+      requestedName: map['requested_name'] as String?,
     );
   }
 }

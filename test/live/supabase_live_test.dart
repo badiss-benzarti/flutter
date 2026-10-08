@@ -182,27 +182,47 @@ void main() {
         final afterDelete = await sync.pull('queue', shopId, queue.cursor);
         expect(afterDelete.deletedKeys, contains(queueId));
 
-        // Invitations (migration 0003): the owner invites Sami, who signs up
-        // with a barber account and joins with the code.
+        // Invitations (migrations 0003-0004): the owner invites Sami. Before
+        // any account, the code shows the salon and his name; then he signs
+        // up under that name and joins.
         final invite = await SupabaseCloudInvites(owner)
             .createBarberInvite(barberId);
         expect(invite.code, matches(RegExp(r'^[A-HJ-NP-Z2-9]{8}$')));
         final barberClient = _client();
+        final links = SupabaseBarberLinkRepository(barberClient);
+        final preview = await links.preview(invite.code.toLowerCase());
+        expect(preview?.shopName, 'Live Check Salon');
+        expect(preview?.barberName, 'Sami B.');
+        expect(await links.preview('WRONG234'), isNull);
+
         final barberAuth = SupabaseCloudAuth(barberClient);
         final sami = await barberAuth.signUp(
           email: 'live-check-$stamp-barber@barberflow-test.com',
           password: 'Live-check-$stamp',
-          fullName: 'Sami',
+          fullName: preview!.barberName,
           role: AccountRole.barber,
         );
-        final links = SupabaseBarberLinkRepository(barberClient);
-        final link = await links.join(sami!.id, invite.code.toLowerCase());
+        final link = await links.join(sami!.id, preview.code);
         expect(link.barberId, barberId);
-        expect(link.shopName, 'Live Check Salon');
         expect(link.commissionRate, 0.5);
         await expectLater(
           links.join(sami.id, invite.code),
           throwsA(isA<AppException>()),
+        );
+
+        // He asks for another name; it applies once the owner accepts.
+        await links.requestNameChange('Samy');
+        expect((await links.myLink(sami.id))?.barberName, 'Sami B.');
+        await SupabaseCloudInvites(owner)
+            .answerNameChange(barberId, accept: true);
+        expect((await links.myLink(sami.id))?.barberName, 'Samy');
+
+        // He leaves: his account stays, the salon is no longer his.
+        await links.leave();
+        expect(await links.myLink(sami.id), isNull);
+        expect(
+          await barberClient.from('tickets').select().eq('shop_id', shopId),
+          isEmpty,
         );
         await barberAuth.signOut();
 

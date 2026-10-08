@@ -15,12 +15,27 @@ class BarberInvite {
 abstract class CloudInvites {
   /// A new code for [barberId], replacing any previous one.
   Future<BarberInvite> createBarberInvite(String barberId);
+
+  /// Accepts or declines the name a barber asked for.
+  Future<void> answerNameChange(String barberId, {required bool accept});
 }
 
 class SupabaseCloudInvites implements CloudInvites {
   SupabaseCloudInvites(this._client);
 
   final SupabaseClient _client;
+
+  @override
+  Future<void> answerNameChange(String barberId, {required bool accept}) async {
+    try {
+      await _client.rpc<dynamic>(
+        'answer_name_change',
+        params: {'p_barber_id': barberId, 'p_accept': accept},
+      );
+    } catch (e) {
+      throw cloudException(e);
+    }
+  }
 
   @override
   Future<BarberInvite> createBarberInvite(String barberId) async {

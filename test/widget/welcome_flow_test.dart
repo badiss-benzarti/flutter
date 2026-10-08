@@ -43,10 +43,11 @@ void main() {
     await tester.tap(find.text('Who are you?'));
     await tester.pump();
 
-    // Barbers get their own sign-in (no owner demo), and can come back.
+    // Barbers start with their salon code (no owner demo), and can come back.
     await tester.tap(find.text('Barber'));
     await tester.pump();
-    expect(find.text('Barber sign in'), findsOneWidget);
+    expect(find.text('Enter your salon code'), findsOneWidget);
+    expect(find.text('Already have an account? Sign in'), findsOneWidget);
     expect(find.text('Explore the demo shop'), findsNothing);
     expect(find.text('See a preview of the barber space'), findsOneWidget);
     await tester.tap(find.text('Who are you?'));
