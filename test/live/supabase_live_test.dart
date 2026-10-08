@@ -7,6 +7,8 @@
 /// Delete the `live-check-...` user afterwards (Authentication → Users).
 library;
 
+import 'dart:typed_data';
+
 import 'package:barber_shop_owner/core/cloud/cloud_auth.dart';
 import 'package:barber_shop_owner/core/cloud/cloud_invites.dart';
 import 'package:barber_shop_owner/core/cloud/cloud_shop_repository.dart';
@@ -18,8 +20,10 @@ import 'package:barber_shop_owner/features/auth_onboarding/domain/shop_snapshot.
 import 'package:barber_shop_owner/features/barber_app/barber_earnings.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_salon.dart';
+import 'package:barber_shop_owner/features/barber_app/portfolio.dart';
 import 'package:barber_shop_owner/features/barbers/domain/barber.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -238,6 +242,81 @@ void main() {
             .since(barberId, DateTime.now().subtract(const Duration(days: 1)));
         expect(earnings.single.clientName, 'Aziz');
         expect(earnings.single.earned, 14.75);
+
+        // Portfolio (migration 0006): Sami posts a photo; a client account
+        // comments and rates it; only a rated real visit sets his rating.
+        final portfolio = SupabasePortfolioRepository(barberClient);
+        await portfolio.publish(
+          barberId: barberId,
+          photo: Uint8List.fromList(
+            img.encodeJpg(img.Image(width: 64, height: 64)),
+          ),
+          caption: 'Live fade',
+        );
+        final posted = (await portfolio.postsOf(barberId)).single;
+        expect(posted.caption, 'Live fade');
+        expect(posted.imagePath, startsWith('$barberId/'));
+
+        // Clients see posts of listed salons.
+        await owner
+            .from('shops')
+            .update({'latitude': 36.8, 'longitude': 10.18, 'is_listed': true})
+            .eq('id', shopId);
+        final clientDb = _client();
+        final clientAuth = SupabaseCloudAuth(clientDb);
+        final chedi = await clientAuth.signUp(
+          email: 'live-check-$stamp-client@barberflow-test.com',
+          password: 'Live-check-$stamp',
+          fullName: 'Chedi',
+          role: AccountRole.client,
+        );
+        await clientDb.from('post_comments').insert({
+          'post_id': posted.id,
+          'body': 'Clean work',
+        });
+        await clientDb.from('post_ratings').insert({
+          'post_id': posted.id,
+          'client_id': chedi!.id,
+          'stars': 5,
+        });
+        final rated = (await portfolio.postsOf(barberId)).single;
+        expect(rated.commentCount, 1);
+        expect(rated.ratingAvg, 5);
+        expect(
+          (await portfolio.commentsOf(posted.id)).single.authorName,
+          'Chedi',
+        );
+        expect((await portfolio.visitRatingOf(barberId)).count, 0);
+
+        final visitId = uuid.v4();
+        await owner.from('tickets').insert({
+          'id': visitId,
+          'shop_id': shopId,
+          'barber_id': barberId,
+          'client_id': chedi.id,
+          'client_name': 'Chedi',
+          'chair_number': 2,
+          'service_names': 'Haircut',
+          'total_price': 25,
+          'barber_cut': 15,
+          'shop_cut': 10,
+          'payment_method': 'card',
+        });
+        await clientDb.from('visit_ratings').insert({
+          'ticket_id': visitId,
+          'barber_id': barberId,
+          'shop_id': shopId,
+          'client_id': chedi.id,
+          'stars': 4,
+        });
+        final visits = await portfolio.visitRatingOf(barberId);
+        expect(visits.average, 4);
+        expect(visits.count, 1);
+        await clientAuth.signOut();
+
+        await portfolio.deletePost(rated);
+        expect(await portfolio.postsOf(barberId), isEmpty);
+        await owner.from('shops').update({'is_listed': false}).eq('id', shopId);
 
         // He asks for another name; it applies once the owner accepts.
         await links.requestNameChange('Samy');

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../prototype/barber/barber_shell.dart';
 import '../../core/ui/ui_helpers.dart';
 import 'barber_session.dart';
 import 'barber_space.dart';
@@ -285,34 +284,6 @@ class BarberProfileTab extends ConsumerWidget {
                     ),
                     subtitle: const Text('You keep your account'),
                     onTap: () => _leave(context, ref, link.shopName),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Coming next',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Card(
-              child: Column(
-                children: [
-                  const ListTile(
-                    leading: Icon(Icons.photo_camera_outlined),
-                    title: Text('Portfolio'),
-                    subtitle: Text('Photos of your cuts for clients'),
-                  ),
-                  const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.visibility_outlined),
-                    title: const Text('See a preview'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => const BarberShell(),
-                      ),
-                    ),
                   ),
                 ],
               ),

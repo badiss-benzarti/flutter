@@ -48,6 +48,8 @@ dependencies:
   latlong2: ^0.10.1
   supabase_flutter: ^2.18.0
   http: ^1.6.0
+  image_picker: ^1.2.4
+  image: ^4.10.1
 
 dev_dependencies:
   flutter_test:

@@ -6,9 +6,13 @@ import 'package:barber_shop_owner/features/barber_app/barber_earnings.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_link.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_salon.dart';
 import 'package:barber_shop_owner/features/barber_app/barber_screens.dart';
+import 'package:barber_shop_owner/features/barber_app/portfolio.dart';
 import 'package:barber_shop_owner/features/finance/domain/service_ticket.dart';
 import 'package:barber_shop_owner/features/floor_plan/domain/station.dart';
 import 'package:barber_shop_owner/features/queue/domain/queue_item.dart';
+
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -115,6 +119,53 @@ class _Earnings implements BarberEarningsRepository {
   ];
 }
 
+class _Portfolio implements PortfolioRepository {
+  final deleted = <String>[];
+
+  @override
+  Future<List<PortfolioPost>> postsOf(String barberId) async => [
+    for (final (id, stars, count) in [('p1', 4.5, 2), ('p2', 0.0, 0)])
+      if (!deleted.contains(id))
+        PortfolioPost(
+          id: id,
+          imagePath: 'b1/$id.jpg',
+          imageUrl: 'https://example.test/$id.jpg',
+          caption: id == 'p1' ? 'Mid skin fade' : '',
+          ratingAvg: stars,
+          ratingCount: count,
+          commentCount: id == 'p1' ? 1 : 0,
+          createdAt: DateTime(2026, 10, 8, 12),
+        ),
+  ];
+
+  @override
+  Future<List<PostComment>> commentsOf(String postId) async => [
+    PostComment(
+      id: 'c1',
+      authorName: 'Chedi',
+      body: 'Clean work',
+      createdAt: DateTime(2026, 10, 8, 13),
+    ),
+  ];
+
+  @override
+  Future<VisitRating> visitRatingOf(String barberId) async =>
+      const VisitRating(4.8, 12);
+
+  @override
+  Future<void> publish({
+    required String barberId,
+    required Uint8List photo,
+    required String caption,
+  }) async {}
+
+  @override
+  Future<void> deletePost(PortfolioPost post) async => deleted.add(post.id);
+
+  @override
+  Future<void> deleteComment(String commentId) async {}
+}
+
 BarberLink _sami({required bool onDuty}) => BarberLink(
   barberId: 'b1',
   barberName: 'Sami',
@@ -150,6 +201,7 @@ void main() {
           barberLinkRepositoryProvider.overrideWithValue(links),
           barberSalonRepositoryProvider.overrideWithValue(salon),
           barberEarningsRepositoryProvider.overrideWithValue(_Earnings()),
+          portfolioRepositoryProvider.overrideWithValue(_Portfolio()),
         ],
         child: MaterialApp(
           theme: AppTheme.lightTheme,
@@ -190,5 +242,25 @@ void main() {
     }
     expect(find.text('Off duty'), findsOneWidget);
     expect(find.textContaining('No chair yet'), findsOneWidget);
+
+    // Portfolio: a social profile, visit rating apart from photo stars.
+    await tester.tap(find.text('Portfolio'));
+    for (var i = 0; i < 3; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.text('My Portfolio'), findsOneWidget);
+    expect(find.text('4.8'), findsOneWidget);
+    expect(find.text('12 visits'), findsOneWidget);
+    // The photos average in the header, and the rated photo in the grid.
+    expect(find.text('4.5'), findsNWidgets(2));
+
+    // A post: caption, its own stars, clients' comments.
+    await tester.tap(find.text('4.5').last);
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 200));
+    }
+    expect(find.text('Mid skin fade'), findsOneWidget);
+    expect(find.text('4.5 · 2 ratings'), findsOneWidget);
+    expect(find.text('Clean work'), findsOneWidget);
   });
 }

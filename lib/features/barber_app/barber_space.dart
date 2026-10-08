@@ -9,15 +9,15 @@ import '../../core/ui/ui_helpers.dart';
 import '../floor_plan/domain/station.dart';
 import '../floor_plan/presentation/widgets/room/room_view.dart';
 import '../queue/domain/queue_item.dart';
-import '../../prototype/barber/barber_shell.dart';
 import 'barber_earnings_tab.dart';
+import 'barber_portfolio_tab.dart';
 import 'barber_link.dart';
 import 'barber_salon.dart';
 import 'barber_screens.dart';
 import 'barber_session.dart';
 
 /// A linked barber's app: the same bar as the owner, with their salon's live
-/// floor as the home tab. The portfolio arrives with roadmap 2.4.
+/// floor as the home tab.
 class BarberSpace extends StatefulWidget {
   const BarberSpace({super.key});
 
@@ -41,7 +41,7 @@ class _BarberSpaceState extends State<BarberSpace> {
           const BarberEarningsTab(),
           _SalonTab(onShowQueue: () => setState(() => _tab = _agendaTab)),
           const _AgendaTab(),
-          const _PortfolioSoon(),
+          const BarberPortfolioTab(),
         ],
       ),
       bottomNavigationBar: RoomNavigationBar(
@@ -392,35 +392,6 @@ class _QueueCard extends StatelessWidget {
                   color: forMe ? const Color(0xFF166534) : Colors.grey,
                 ),
               ),
-      ),
-    );
-  }
-}
-
-/// Placeholder until photo uploads arrive (roadmap 2.4).
-class _PortfolioSoon extends StatelessWidget {
-  const _PortfolioSoon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('My Portfolio')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const EmptyBox(
-            'Coming soon: photos of your cuts, shown to clients on your '
-            'salon page.',
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const BarberShell()),
-            ),
-            icon: const Icon(Icons.visibility_outlined),
-            label: const Text('See a preview'),
-          ),
-        ],
       ),
     );
   }
