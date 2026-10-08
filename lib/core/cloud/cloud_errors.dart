@@ -5,6 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../errors/app_exception.dart';
 
+/// The app is newer than the server: a migration has not been applied yet.
+const _notOnServerMessage =
+    'This feature is not switched on for your salon yet. Ask your '
+    'administrator to update the server, then try again.';
+
 const _offlineMessage =
     'No internet connection. Check your network and try again.';
 
@@ -38,8 +43,20 @@ AppException cloudException(Object error) {
       'P0001' => error.message,
       '42501' => 'You are not allowed to do this.',
       '23505' => 'This already exists.',
+      // Unknown table or function: the server lacks a migration.
+      'PGRST202' || 'PGRST205' || '42P01' || '42883' => _notOnServerMessage,
       _ => 'The server refused the change. Please try again.',
     });
+  }
+  if (error is StorageException) {
+    debugPrint('Storage refused: ${error.statusCode} ${error.message}');
+    return AppException(
+      error.message.contains('Bucket not found')
+          ? _notOnServerMessage
+          : error.statusCode == '413'
+          ? 'This photo is too large.'
+          : 'The photo could not be uploaded. Please try again.',
+    );
   }
   debugPrint('Unexpected cloud error: $error');
   return const AppException('Something went wrong. Please try again.');
